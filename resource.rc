@@ -1,0 +1,3 @@
+#include "resource1.h"
+
+IDI_MYICON ICON "spoticon.ico"
