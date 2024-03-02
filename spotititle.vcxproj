@@ -145,6 +145,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="libs\romaji\romaji.cpp" />
+    <ClCompile Include="libs\romaji\utf8.cpp" />
     <ClCompile Include="SongParser.cpp" />
     <ClCompile Include="Spotify.cpp" />
     <ClCompile Include="Spotititle.cpp" />
