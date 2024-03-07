@@ -19,6 +19,16 @@ void SubtitleWindow::SetText(const char* text)
     displayText = text;
 }
 
+void SubtitleWindow::Hide()
+{
+    ShowWindow(hwnd, SW_HIDE);
+}
+
+void SubtitleWindow::Show()
+{
+    ShowWindow(hwnd, SW_SHOW);
+}
+
 void SubtitleWindow::SetFont(HFONT font)
 {
     hFont = font;
@@ -64,7 +74,7 @@ LRESULT SubtitleWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM l
 
         FillRect(hdc, &ps.rcPaint, brush);
 
-        HFONT hOldFont = (HFONT)SelectObject(hdc, subtitleWindow->hFont); // <-- add this
+        HFONT hOldFont = (HFONT)SelectObject(hdc, subtitleWindow->hFont);
 
         std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter; // Create a converter object
         std::wstring wcDisplayText = converter.from_bytes(subtitleWindow->displayText); // Convert the multibyte string to wide-character string

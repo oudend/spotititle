@@ -26,6 +26,7 @@ public:
     COLORREF textColor = RGB(15, 15, 15);
     COLORREF backgroundColor = RGB(200, 200, 255);
 
+    WNDCLASS subtitleWc;
     HWND hwnd;
 
     HFONT hFont;
@@ -45,10 +46,14 @@ public:
 
     void Update();
 
+    void Hide();
+
+    void Show();
+
     SubtitleWindow(const char* displayText, HINSTANCE hInstance, int nCmdShow, int width, int height, int x, int y) : displayText(displayText), width(width), height(height) {
         const wchar_t CLASS_NAME[] = L"Subtitle Window Class";
 
-        WNDCLASS subtitleWc = {};
+        subtitleWc = {};
 
         subtitleWc.lpfnWndProc = WindowProc;
         subtitleWc.hInstance = hInstance;
@@ -86,7 +91,9 @@ public:
             OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, FIXED_PITCH,
             TEXT("Consolas"));
 
-        ShowWindow(hwnd, nCmdShow);
+        Show();
+
+        ShowWindow(hwnd, SW_SHOW);
     }
 };
 

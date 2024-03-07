@@ -11,6 +11,7 @@
 #include <cstring>
 #include <locale>
 #include <codecvt>
+#include <memory>
 
 #include "json.h"
 
@@ -58,6 +59,16 @@ public:
     struct LyricsData {
         SyncType syncType;
         std::vector<LyricsTimeData> lyricsTimeData;
+
+        void free_memory()
+        {
+            int vecSize = lyricsTimeData.size();
+
+            for (int i = 0; i < vecSize; i++)
+            {
+                free((char*)lyricsTimeData[i].lineLyric);
+            }
+        }
     };
 
     struct LyricData
@@ -87,8 +98,10 @@ private:
             syncType = SyncType::LINE_SYNCED;
         }
 
-        if (syncType == SyncType::UNSYNCED)
+        if (syncType == SyncType::UNSYNCED) {
+            free(root);
             return { syncType, std::vector<LyricsTimeData>() };
+        }
 
         struct json_object_element_s* lyricsElement = syncTypeElement->next;
 
@@ -114,12 +127,14 @@ private:
 
             struct json_object_element_s* lineLyricElement = elapsedTimeElement->next;
 
-            const char* lineLyric = json_value_as_string(lineLyricElement->value)->string;
+            const char* lineLyric = _strdup(json_value_as_string(lineLyricElement->value)->string);
 
             lyricsTimeData.push_back({ elapsedTime, lineLyric });
 
             lyricsData = lyricsData->next;
         }
+
+        free(root);
 
         return { syncType, lyricsTimeData };
     }
@@ -264,13 +279,17 @@ public:
 
         struct json_object_element_s* idElement = itemObject->start->next->next->next->next->next->next->next->next->next;
 
-        const char* id = json_value_as_string(idElement->value)->string;
+        const char* id = _strdup(json_value_as_string(idElement->value)->string);
 
         struct json_object_element_s* nameElement = idElement->next->next;
 
-        const char* name = json_value_as_string(nameElement->value)->string;
+        const char* name = _strdup(json_value_as_string(nameElement->value)->string);
 
-        return { name, id, progress, true, ReturnCode::OK };
+        CurrentSongData songData = { name, id, progress, true, ReturnCode::OK };
+
+        free(root);
+
+        return songData;
     }
 
     Result refreshAccessToken(const char* sp_dc) {
@@ -311,19 +330,20 @@ public:
 
         const char* jsonString = readBuffer.c_str();
 
-        if(readBuffer.length() == 0)
+        if (readBuffer.length() == 0)
             return Result::FAIL;
 
         struct json_value_s* root = json_parse(jsonString, strlen(jsonString));
 
-        if (root == nullptr)
+        if (root == nullptr) {
             return Result::FAIL;
+        }
 
         struct json_object_s* object = (struct json_object_s*)root->payload;
 
         struct json_object_element_s* accessTokenElement = object->start->next;
 
-        accessToken = json_value_as_string(accessTokenElement->value)->string;
+        accessToken = _strdup(json_value_as_string(accessTokenElement->value)->string);
 
         authorizationString = "authorization: Bearer ";
         authorizationString += accessToken;
@@ -334,6 +354,8 @@ public:
         slist1 = NULL;
 
         SP_DC = sp_dc;
+
+        free(root);
 
         return Result::SUCCESS;
     }

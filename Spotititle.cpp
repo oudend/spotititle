@@ -19,26 +19,14 @@
 #include <vector>
 #include <locale>
 #include <codecvt>
-
-#include "libs/romaji/romaji.h"
-//#include "libs/romaji/romaji.cpp"
-
-#define CURL_STATICLIB
-#include <curl\curl.h>
-
-#include "json.h"
-
-#include "resource1.h"
-
-#include "Spotify.h"
-
-#include "SubtitleWindow.h";
-
-
-#include <stdio.h>
 #include <string.h>
 #include <limits.h>
 #include <time.h>
+
+#include "libs/romaji/romaji.h"
+#include "resource1.h"
+#include "Spotify.h"
+#include "SubtitleWindow.h";
 
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_STANDARD_IO
@@ -53,6 +41,8 @@
 #define NOT_SYNCED "lyrics not synced"
 #define NOT_CONNECTED "not connected(sp_dc needed)"
 
+#define MAX_ERROR_COUNT 10
+
 
 const char* nextDisplayText = "not listening";
 const char* currentSong = "";
@@ -63,8 +53,8 @@ unsigned long int nextDisplayTextDelay = idleUpdateDelay;
 unsigned long int nextDisplayTextProgress = 0;
 unsigned long int progress;
 
-static int kanjiToRomaji = 0;
-static int showLyrics = 0;
+static int kanaToRomaji = 0;
+static int showLyrics = 1;
 int delayOffset = 0;
 
 int WINDOW_WIDTH = 300; //rename :(
@@ -82,7 +72,18 @@ Spotify::CurrentSongData songData;
 
 unsigned long int serverErrorCount = 0;
 
+std::string romaji;
+
+static LRESULT CALLBACK WindowProcGUI(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
+
+bool SP_DC_VALID = false;
+
+int fontSize = 30;
+
 void calculateSubtitles(SubtitleWindow *subtitleWindow) {
+    //free((char*)songData.id);
+    //free((char*)songData.name);
+
     songData = spotify.getCurrentlyPlaying();
 
     if (songData.code == Spotify::ReturnCode::SERVER_ERROR) {
@@ -92,7 +93,7 @@ void calculateSubtitles(SubtitleWindow *subtitleWindow) {
         serverErrorCount = 0;
     }
 
-    if ((!songData.listening && serverErrorCount > 4 && songData.code == Spotify::ReturnCode::SERVER_ERROR) || (!songData.listening && songData.code == Spotify::ReturnCode::OK)) {
+    if ((!songData.listening && serverErrorCount > MAX_ERROR_COUNT && songData.code == Spotify::ReturnCode::SERVER_ERROR) || (!songData.listening && songData.code == Spotify::ReturnCode::OK)) {
         nextDisplayTextDelay = idleUpdateDelay;
         nextDisplayText = NOT_LISTENING;
 
@@ -117,6 +118,7 @@ void calculateSubtitles(SubtitleWindow *subtitleWindow) {
     }
 
     if (strcmp(name, currentSong) != 0) {
+        lyricsData.free_memory();
         lyricsData = spotify.getLyrics(songData.id);
 
         currentSong = name;
@@ -137,8 +139,8 @@ void calculateSubtitles(SubtitleWindow *subtitleWindow) {
         nextDisplayTextProgress = currentLyricData.closestLyricsTimeData.elapsedTime + delayOffset;
         nextDisplayText = currentLyricData.lineLyric;
 
-        if (kanjiToRomaji == 1) {
-            std::string romaji;
+        if (kanaToRomaji == 1) {
+            romaji = "";
             japanese::utf8_kana_to_romaji(currentLyricData.lineLyric, romaji);
             nextDisplayText = romaji.c_str();
         }
@@ -174,44 +176,14 @@ int initializeTimer(SubtitleWindow *subtitleWindow) {
     return 0;
 }
 
-
-static LRESULT CALLBACK WindowProcGUI(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
+void setFontSize(SubtitleWindow* subtitleWindow, int fontSize) 
 {
-    switch (msg)
-    {
-    case WM_DESTROY:
-        PostQuitMessage(0);
-        return 0;
-    case WM_SIZING:
-    {
-        /* Size of the client / active are is extracted and stored */
-        RECT rect;
-        GetClientRect(hwnd, &rect);
-        WINDOW_WIDTH = rect.right - rect.left;
-        WINDOW_HEIGHT = rect.bottom - rect.top;
-    }
-    break;
-    case WM_SIZE:
-    {
-        RECT rect;
-        if (GetWindowRect(hwnd, &rect))
-        {
-            WINDOW_WIDTH = rect.right - rect.left;
-            WINDOW_HEIGHT = rect.bottom - rect.top;
-        }
-    }
-    break;
-    }
-
-    if (nk_gdi_handle_event(hwnd, msg, wparam, lparam))
-        return 0;
-
-    return DefWindowProcW(hwnd, msg, wparam, lparam);
+    HFONT hFont = CreateFontA(fontSize, 0, GM_COMPATIBLE, ORIENTATION_PREFERENCE_NONE, FW_SEMIBOLD,
+        false, false, false, ANSI_CHARSET,
+        OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY, FF_MODERN,
+        "CONSOLAS");
+    subtitleWindow->SetFont(hFont);
 }
-
-bool SP_DC_VALID = false;
-
-int fontSize = 30;
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
 {
@@ -222,18 +194,14 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
      SubtitleWindow subtitleWindow = SubtitleWindow(NOT_CONNECTED, hInstance, nCmdShow, screenWidth / 2, screenHeight, 200, 300);
 
-     HFONT hFont = CreateFontA(fontSize, 0, 1, ORIENTATION_PREFERENCE_NONE, FW_SEMIBOLD,
-         FW_DONTCARE, FW_DONTCARE, FW_DONTCARE, ANSI_CHARSET,
-         OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, FIXED_PITCH,
-         "CONSOLAS");
-     subtitleWindow.SetFont(hFont);
+     setFontSize(&subtitleWindow, fontSize);
      subtitleWindow.Update();
 
     GdiFont* font;
     struct nk_context* ctx;
 
     RECT rect = { 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT };
-    DWORD style = WS_OVERLAPPEDWINDOW;// &~WS_SIZEBOX & ~WS_MAXIMIZEBOX;
+    DWORD style = WS_OVERLAPPEDWINDOW;
     DWORD exstyle = WS_EX_APPWINDOW;
     HDC dc;
 
@@ -260,7 +228,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
     MSG msg = { };
 
-    //timer for checking if the cursor is hovering the window.
     SetTimer(GUIHwnd, 1, 20, NULL);
 
     int running = 1;
@@ -339,11 +306,18 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
             nk_label(ctx, "toggle", NK_TEXT_CENTERED);
             nk_layout_row_static(ctx, 30, WINDOW_WIDTH - 100, 1);
 
-            nk_checkbox_label(ctx, "lyrics visible", &showLyrics);
+            if (nk_checkbox_label(ctx, "lyrics visible", &showLyrics)) {
+                if (!showLyrics) {
+                    subtitleWindow.Hide();
+                }
+                else {
+                    subtitleWindow.Show();
+                }
+            }
 
             nk_layout_row_static(ctx, 30, WINDOW_WIDTH - 100, 1);
 
-            nk_checkbox_label(ctx, "kanjiToRomaji", &kanjiToRomaji);
+            nk_checkbox_label(ctx, "convert kana to romaji", &kanaToRomaji);
 
             nk_layout_row_static(ctx, 30, WINDOW_WIDTH, 1);
             nk_label(ctx, "text color", NK_TEXT_CENTERED);
@@ -422,21 +396,13 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
             nk_layout_row_static(ctx, 30, (WINDOW_WIDTH - 100) / 2, 2);
             if (nk_slider_int(ctx, 6, &fontSize, 50, 1)) {
-                HFONT hFont = CreateFontA(fontSize, 0, 1, ORIENTATION_PREFERENCE_NONE, FW_SEMIBOLD,
-                    FW_DONTCARE, FW_DONTCARE, FW_DONTCARE, ANSI_CHARSET,
-                    OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, FIXED_PITCH,
-                    "CONSOLAS");
-                subtitleWindow.SetFont(hFont);
+                setFontSize(&subtitleWindow, fontSize);
                 subtitleWindow.Update();
             }
             int fontSizeTemp = fontSize;
             fontSize = nk_propertyi(ctx, "size:", 6, fontSize, 50, 1, 0.5f);
             if (fontSizeTemp != fontSize) {
-                HFONT hFont = CreateFontA(fontSize, 0, 1, ORIENTATION_PREFERENCE_NONE, FW_SEMIBOLD,
-                    FW_DONTCARE, FW_DONTCARE, FW_DONTCARE, ANSI_CHARSET,
-                    OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, FIXED_PITCH,
-                    "CONSOLAS");
-                subtitleWindow.SetFont(hFont);
+                setFontSize(&subtitleWindow, fontSize);
                 subtitleWindow.Update();
             }
 
@@ -453,8 +419,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
             if (idleUpdateDelayTemp != idleUpdateDelay) {
                 calculateSubtitles(&subtitleWindow);
             }
-
-
 
             nk_layout_row_static(ctx, 30, WINDOW_WIDTH, 1);
             nk_label(ctx, "delayOffset", NK_TEXT_CENTERED);
@@ -478,7 +442,43 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
     nk_gdifont_del(font);
     ReleaseDC(GUIHwnd, dc);
-    //UnregisterClassW(subtitleWc.lpszClassName, subtitleWc.hInstance);
+    UnregisterClassW(GUIwc.lpszClassName, GUIwc.hInstance);
+    UnregisterClassW(subtitleWindow.subtitleWc.lpszClassName, subtitleWindow.subtitleWc.hInstance);
 
     return 0;
+}
+
+
+static LRESULT CALLBACK WindowProcGUI(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
+{
+    switch (msg)
+    {
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        return 0;
+    case WM_SIZING:
+    {
+        /* Size of the client / active area is extracted and stored */
+        RECT rect;
+        GetClientRect(hwnd, &rect);
+        WINDOW_WIDTH = rect.right - rect.left;
+        WINDOW_HEIGHT = rect.bottom - rect.top;
+    }
+    break;
+    case WM_SIZE:
+    {
+        RECT rect;
+        if (GetWindowRect(hwnd, &rect))
+        {
+            WINDOW_WIDTH = rect.right - rect.left;
+            WINDOW_HEIGHT = rect.bottom - rect.top;
+        }
+    }
+    break;
+    }
+
+    if (nk_gdi_handle_event(hwnd, msg, wparam, lparam))
+        return 0;
+
+    return DefWindowProcW(hwnd, msg, wparam, lparam);
 }

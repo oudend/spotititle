@@ -297,6 +297,11 @@ struct utf8_kana_to_romaji_converter {
 				}
 				else {
 					/* Omit unrecognized characters. */
+
+					if (!is_katakana) {
+						romaji += test;
+					}
+
 					continue;
 				}
 
