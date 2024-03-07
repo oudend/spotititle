@@ -37,8 +37,9 @@ public:
         NONE
     };
 
-    enum class ErrorType {
-
+    enum class ReturnCode {
+        OK,
+        SERVER_ERROR,
     };
 
     struct CurrentSongData {
@@ -46,6 +47,7 @@ public:
         const char* id;
         unsigned long int progress;
         bool listening;
+        ReturnCode code;
     };
 
     struct LyricsTimeData {
@@ -231,7 +233,7 @@ public:
         slist1 = NULL;
 
         if(readBuffer.length() == 0)
-            return { NULL, NULL, NULL, false };
+            return { NULL, NULL, NULL, false, ReturnCode::OK };
 
 
         struct json_value_s* root = json_parse(jsonString, strlen(jsonString));
@@ -241,8 +243,12 @@ public:
         struct json_object_element_s* errorElement = object->start;
 
         if (strcmp(errorElement->name->string, "error") == 0) {
-            return { NULL, NULL, NULL, false };
+            return { NULL, NULL, NULL, false, ReturnCode::SERVER_ERROR };
         }
+
+        //if (strcmp(errorElement->name->string, "timestamp") == 0) { 
+        //    return { NULL, NULL, NULL, false, ReturnCode::OK };
+        //}
 
         struct json_object_element_s* progressElement = object->start->next->next;
 
@@ -264,7 +270,7 @@ public:
 
         const char* name = json_value_as_string(nameElement->value)->string;
 
-        return { name, id, progress, true };
+        return { name, id, progress, true, ReturnCode::OK };
     }
 
     Result refreshAccessToken(const char* sp_dc) {

@@ -30,6 +30,9 @@
     <ClCompile Include="libs\romaji\romaji.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="SubtitleWindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource1.h">
@@ -39,6 +42,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Spotify.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SubtitleWindow.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

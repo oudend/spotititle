@@ -150,11 +150,13 @@
     <ClCompile Include="SongParser.cpp" />
     <ClCompile Include="Spotify.cpp" />
     <ClCompile Include="Spotititle.cpp" />
+    <ClCompile Include="SubtitleWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource1.h" />
     <ClInclude Include="SongParser.h" />
     <ClInclude Include="Spotify.h" />
+    <ClInclude Include="SubtitleWindow.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="resource.rc" />
