@@ -16,31 +16,43 @@
 #include <limits.h>
 #include <time.h>
 
-#include "Spotify.h"
+#include <gdiplus.h>
+using namespace Gdiplus;
+#pragma comment (lib, "gdiplus.lib")
 
 class SubtitleWindow
 {
 public:
     const char* displayText;
 
-    COLORREF textColor = RGB(15, 15, 15);
-    COLORREF backgroundColor = RGB(200, 200, 255);
+    Color textColorPrimary;
+    Color textColorSecondary;
+
+    Color backgroundColorPrimary;
+    Color backgroundColorSecondary;
+
+    //Matrix backgroundGradientRotationMatrix;
+    Matrix* backgroundGradientRotationMatrix;
 
     WNDCLASS subtitleWc;
     HWND hwnd;
 
-    HFONT hFont;
+    //HFONT hFont;
 
     int width;
     int height;
+
+    int fontSize = 30;
+
+    const char* fontName = "Consolas";
 
     static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
     void SetDimensions(int width, int height);
 
-    void SetFont(const char* name, int size);
+    //void SetFont(const char* name, int size);
 
-    void SetFont(HFONT font);
+    //void SetFont(HFONT font);
 
     void SetText(const char* text);
 
@@ -86,14 +98,20 @@ public:
 
         SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), 0, LWA_COLORKEY);
 
-        HFONT hFont = CreateFontW(30, 0, 1, ORIENTATION_PREFERENCE_NONE, FW_SEMIBOLD,
-            FW_DONTCARE, FW_DONTCARE, FW_DONTCARE, ANSI_CHARSET,
-            OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, FIXED_PITCH,
-            TEXT("Consolas"));
+        GdiplusStartupInput gdiplusStartupInput;
+        ULONG_PTR           gdiplusToken;
+        Status st = GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
+
+        textColorPrimary = Color(255, 255, 255);
+        textColorSecondary = Color(255, 255, 255);
+        backgroundColorPrimary = Color(0, 0, 0);
+        backgroundColorSecondary = Color(0, 0, 0);
+
+        backgroundGradientRotationMatrix = new Matrix();
+
+        SetTimer(hwnd, 66, 66, NULL);
 
         Show();
-
-        ShowWindow(hwnd, SW_SHOW);
     }
 };
 

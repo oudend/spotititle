@@ -98,7 +98,7 @@ void calculateSubtitles(SubtitleWindow *subtitleWindow) {
         nextDisplayText = NOT_LISTENING;
 
         subtitleWindow->SetText(NOT_LISTENING);
-        subtitleWindow->Update();
+        //subtitleWindow->Update();
         return;
     }
 
@@ -114,7 +114,7 @@ void calculateSubtitles(SubtitleWindow *subtitleWindow) {
 
     if (progress >= nextDisplayTextProgress) {
         subtitleWindow->SetText(nextDisplayText);
-        subtitleWindow->Update();
+        //subtitleWindow->Update();
     }
 
     if (strcmp(name, currentSong) != 0) {
@@ -123,14 +123,14 @@ void calculateSubtitles(SubtitleWindow *subtitleWindow) {
 
         currentSong = name;
         subtitleWindow->SetText(currentSong);
-        subtitleWindow->Update();
+        //subtitleWindow->Update();
     }
 
     if (lyricsData.syncType != Spotify::SyncType::LINE_SYNCED || lyricsData.lyricsTimeData.empty()) {
         nextDisplayTextDelay = idleUpdateDelay;
         nextDisplayText = NOT_SYNCED;
         subtitleWindow->SetText(NOT_SYNCED);
-        subtitleWindow->Update();
+        //subtitleWindow->Update();
     }
     else
     {
@@ -178,11 +178,22 @@ int initializeTimer(SubtitleWindow *subtitleWindow) {
 
 void setFontSize(SubtitleWindow* subtitleWindow, int fontSize) 
 {
-    HFONT hFont = CreateFontA(fontSize, 0, GM_COMPATIBLE, ORIENTATION_PREFERENCE_NONE, FW_SEMIBOLD,
-        false, false, false, ANSI_CHARSET,
-        OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY, FF_MODERN,
-        "CONSOLAS");
-    subtitleWindow->SetFont(hFont);
+    subtitleWindow->fontSize = fontSize;
+}
+
+enum Theme { DEFAULT, PURPLE };
+static int theme = Theme::DEFAULT;
+
+const char* themes[] = { "DEFAULT", "PURPLE" };
+
+Color themeValues[][4] = { {Color(15, 15, 15), Color(15, 15, 15), Color(200, 200, 255), Color(200, 200, 255)},
+                           {Color(30, 30, 30), Color(15, 15, 15), Color(128, 0, 128), Color(95, 0, 95)} };
+
+void setTheme(SubtitleWindow* subtitleWindow, int theme) {
+    subtitleWindow->textColorPrimary = themeValues[theme][0];
+    subtitleWindow->textColorSecondary = themeValues[theme][1];
+    subtitleWindow->backgroundColorPrimary = themeValues[theme][2];
+    subtitleWindow->backgroundColorSecondary = themeValues[theme][3];
 }
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
@@ -195,7 +206,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
      SubtitleWindow subtitleWindow = SubtitleWindow(NOT_CONNECTED, hInstance, nCmdShow, screenWidth / 2, screenHeight, 200, 300);
 
      setFontSize(&subtitleWindow, fontSize);
-     subtitleWindow.Update();
+     //subtitleWindow.Update();
 
     GdiFont* font;
     struct nk_context* ctx;
@@ -232,6 +243,14 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
     int running = 1;
     int needs_refresh = 1;
+
+    setTheme(&subtitleWindow, theme);
+
+   /* Color textColorPrimary;
+    Color textColorSecondary;
+
+    Color backgroundColorPrimary;
+    Color backgroundColorSecondary;*/
 
     while (running) {
         /* Input */
@@ -319,76 +338,11 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
             nk_checkbox_label(ctx, "convert kana to romaji", &kanaToRomaji);
 
-            nk_layout_row_static(ctx, 30, WINDOW_WIDTH, 1);
-            nk_label(ctx, "text color", NK_TEXT_CENTERED);
-
-            nk_layout_row_static(ctx, 30, WINDOW_WIDTH - 100, 1);
-            if (nk_combo_begin_color(ctx, nk_rgb_cf(currentTextColor), nk_vec2(WINDOW_WIDTH - 100, 400))) {
-                enum color_mode { COL_RGB, COL_HSV };
-                static int col_mode = COL_RGB;
-
-                nk_layout_row_dynamic(ctx, 25, 2);
-                col_mode = nk_option_label(ctx, "RGB", col_mode == COL_RGB) ? COL_RGB : col_mode;
-                col_mode = nk_option_label(ctx, "HSV", col_mode == COL_HSV) ? COL_HSV : col_mode;
-
-                nk_layout_row_dynamic(ctx, 30, 1);
-                if (col_mode == COL_RGB) {
-                    currentTextColor.r = nk_propertyf(ctx, "#R:", 0, currentTextColor.r, 1.0f, 0.01f, 0.005f);
-                    currentTextColor.g = nk_propertyf(ctx, "#G:", 0, currentTextColor.g, 1.0f, 0.01f, 0.005f);
-                    currentTextColor.b = nk_propertyf(ctx, "#B:", 0, currentTextColor.b, 1.0f, 0.01f, 0.005f);
-                }
-                else {
-                    float hsva[4];
-                    nk_colorf_hsva_fv(hsva, currentTextColor);
-                    hsva[0] = nk_propertyf(ctx, "#H:", 0, hsva[0], 1.0f, 0.01f, 0.05f);
-                    hsva[1] = nk_propertyf(ctx, "#S:", 0, hsva[1], 1.0f, 0.01f, 0.05f);
-                    hsva[2] = nk_propertyf(ctx, "#V:", 0, hsva[2], 1.0f, 0.01f, 0.05f);
-                    currentTextColor = nk_hsva_colorfv(hsva);
-                }
-
-                if (tempTextColor.r != currentTextColor.r || tempTextColor.g != currentTextColor.g || tempTextColor.b != currentTextColor.b) {
-                    subtitleWindow.textColor = RGB(currentTextColor.r * 255.0f, currentTextColor.g * 255.0f, currentTextColor.b * 255.0f);
-                    subtitleWindow.Update();
-                    tempTextColor = currentTextColor;
-                }
-
-                nk_combo_end(ctx);
-            }
-
-            nk_layout_row_static(ctx, 30, WINDOW_WIDTH, 1);
-            nk_label(ctx, "background color", NK_TEXT_CENTERED);
-
-            nk_layout_row_static(ctx, 30, WINDOW_WIDTH - 100, 1);
-            if (nk_combo_begin_color(ctx, nk_rgb_cf(currentBackgroundColor), nk_vec2(WINDOW_WIDTH - 100, 400))) {
-                enum color_mode { COL_RGB, COL_HSV };
-                static int col_mode = COL_RGB;
-
-                nk_layout_row_dynamic(ctx, 25, 2);
-                col_mode = nk_option_label(ctx, "RGB", col_mode == COL_RGB) ? COL_RGB : col_mode;
-                col_mode = nk_option_label(ctx, "HSV", col_mode == COL_HSV) ? COL_HSV : col_mode;
-
-                nk_layout_row_dynamic(ctx, 30, 1);
-                if (col_mode == COL_RGB) {
-                    currentBackgroundColor.r = nk_propertyf(ctx, "#R:", 0, currentBackgroundColor.r, 1.0f, 0.01f, 0.005f);
-                    currentBackgroundColor.g = nk_propertyf(ctx, "#G:", 0, currentBackgroundColor.g, 1.0f, 0.01f, 0.005f);
-                    currentBackgroundColor.b = nk_propertyf(ctx, "#B:", 0, currentBackgroundColor.b, 1.0f, 0.01f, 0.005f);
-                }
-                else {
-                    float hsva[4];
-                    nk_colorf_hsva_fv(hsva, currentBackgroundColor);
-                    hsva[0] = nk_propertyf(ctx, "#H:", 0, hsva[0], 1.0f, 0.01f, 0.05f);
-                    hsva[1] = nk_propertyf(ctx, "#S:", 0, hsva[1], 1.0f, 0.01f, 0.05f);
-                    hsva[2] = nk_propertyf(ctx, "#V:", 0, hsva[2], 1.0f, 0.01f, 0.05f);
-                    currentBackgroundColor = nk_hsva_colorfv(hsva);
-                }
-
-                if (tempBackgroundColor.r != currentBackgroundColor.r || tempBackgroundColor.g != currentBackgroundColor.g || tempBackgroundColor.b != currentBackgroundColor.b) {
-                    subtitleWindow.backgroundColor = RGB(currentBackgroundColor.r * 255.0f, currentBackgroundColor.g * 255.0f, currentBackgroundColor.b * 255.0f);
-                    subtitleWindow.Update();
-                    tempBackgroundColor = currentBackgroundColor;
-                }
-
-                nk_combo_end(ctx);
+            nk_layout_row_dynamic(ctx, 30, 2);
+            int prev_theme = theme;
+            theme = nk_combo(ctx, themes, 2, theme, 25, nk_vec2(200, 200));
+            if (theme != prev_theme) {
+                setTheme(&subtitleWindow, theme);
             }
 
             nk_layout_row_static(ctx, 30, WINDOW_WIDTH, 1);
@@ -397,15 +351,15 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
             nk_layout_row_static(ctx, 30, (WINDOW_WIDTH - 100) / 2, 2);
             if (nk_slider_int(ctx, 6, &fontSize, 50, 1)) {
                 setFontSize(&subtitleWindow, fontSize);
-                subtitleWindow.Update();
+                //subtitleWindow.Update();
             }
             int fontSizeTemp = fontSize;
             fontSize = nk_propertyi(ctx, "size:", 6, fontSize, 50, 1, 0.5f);
             if (fontSizeTemp != fontSize) {
                 setFontSize(&subtitleWindow, fontSize);
-                subtitleWindow.Update();
+                //subtitleWindow.Update();
             }
-
+            
 
             nk_layout_row_static(ctx, 30, WINDOW_WIDTH, 1);
             nk_label(ctx, "idleUpdateDelay", NK_TEXT_CENTERED);
@@ -432,6 +386,27 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
             if (delayOffsetTemp != delayOffset) {
                 calculateSubtitles(&subtitleWindow);
             }
+
+            nk_layout_row_static(ctx, 30, WINDOW_WIDTH - 100, 1);
+            nk_label(ctx, currentSong, NK_TEXT_CENTERED);
+
+            nk_layout_row_static(ctx, 30, WINDOW_WIDTH - 100, 1);
+            nk_label(ctx, "progress", NK_TEXT_CENTERED);
+
+            nk_layout_row_static(ctx, 30, WINDOW_WIDTH - 100, 1);
+            nk_label(ctx, std::to_string(progress).c_str(), NK_TEXT_CENTERED);
+
+            nk_layout_row_static(ctx, 30, WINDOW_WIDTH - 100, 1);
+            nk_label(ctx, "target progress", NK_TEXT_CENTERED);
+
+            nk_layout_row_static(ctx, 30, WINDOW_WIDTH - 100, 1);
+            nk_label(ctx, std::to_string(nextDisplayTextProgress).c_str(), NK_TEXT_CENTERED);
+
+            nk_layout_row_static(ctx, 30, WINDOW_WIDTH - 100, 1);
+            nk_label(ctx, "next text", NK_TEXT_CENTERED);
+
+            nk_layout_row_static(ctx, 30, WINDOW_WIDTH - 100, 1);
+            nk_label(ctx, nextDisplayText, NK_TEXT_CENTERED);
         }
         nk_end(ctx);
 
