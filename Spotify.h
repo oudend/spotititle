@@ -13,7 +13,8 @@
 #include <codecvt>
 #include <memory>
 
-#include "json.h"
+#include "libs/json/json.hpp"
+using json = nlohmann::json;
 
 #pragma once
 
@@ -82,59 +83,34 @@ private:
     LyricsData parseLyricsString(std::string readBuffer) {
         const char* jsonString = readBuffer.c_str();
 
-        struct json_value_s* root = json_parse(jsonString, strlen(jsonString));
+        json data = json::parse(readBuffer);
 
-        struct json_object_s* object = (struct json_object_s*)root->payload;
+        std::string startTimeMsString = data["lyrics"]["lines"][0]["startTimeMs"];
 
-        struct json_object_s* lyricsObject = json_value_as_object(object->start->value);
+        unsigned long int startTimeMs = std::stoi(startTimeMsString);
 
-        struct json_object_element_s* syncTypeElement = lyricsObject->start;
+        std::vector<LyricsTimeData> lyricsTimeData;
 
-        const char* syncTypeString = json_value_as_string(syncTypeElement->value)->string;
+        for (const auto& element : data["lyrics"]["lines"]) {
+            LyricsTimeData subLyricsTimeData {
+                std::stoi(element["startTimeMs"].template get<std::string>()),
+                _strdup(element["words"].template get<std::string>().c_str())
+            };
+
+            lyricsTimeData.push_back(subLyricsTimeData);
+        }
+
+        std::string syncTypeString = data["lyrics"]["syncType"];
 
         SyncType syncType = SyncType::UNSYNCED;
 
-        if (strcmp(syncTypeString, "LINE_SYNCED") == 0) {
+        if (syncTypeString == "LINE_SYNCED") {
             syncType = SyncType::LINE_SYNCED;
         }
 
         if (syncType == SyncType::UNSYNCED) {
-            free(root);
             return { syncType, std::vector<LyricsTimeData>() };
         }
-
-        struct json_object_element_s* lyricsElement = syncTypeElement->next;
-
-        struct json_array_s* lyricsLinesObject = json_value_as_array(lyricsElement->value);
-
-        std::vector<LyricsTimeData> lyricsTimeData;
-
-        struct json_array_element_s* lyricsData = lyricsLinesObject->start;
-
-        for (int i = 0; i < lyricsLinesObject->length; i++) {
-
-            struct json_object_s* lyricsDataObject = json_value_as_object(lyricsData->value);
-
-            struct json_object_element_s* elapsedTimeElement = lyricsDataObject->start;
-
-            const char* elapsedTimeString = json_value_as_string(elapsedTimeElement->value)->string;
-
-            std::stringstream strValue;
-            strValue << elapsedTimeString;
-
-            unsigned long int elapsedTime;
-            strValue >> elapsedTime;
-
-            struct json_object_element_s* lineLyricElement = elapsedTimeElement->next;
-
-            const char* lineLyric = _strdup(json_value_as_string(lineLyricElement->value)->string);
-
-            lyricsTimeData.push_back({ elapsedTime, lineLyric });
-
-            lyricsData = lyricsData->next;
-        }
-
-        free(root);
 
         return { syncType, lyricsTimeData };
     }
@@ -240,8 +216,6 @@ public:
 
         ret = curl_easy_perform(hnd);
 
-        const char* jsonString = readBuffer.c_str();
-
         curl_easy_cleanup(hnd);
         hnd = NULL;
         curl_slist_free_all(slist1);
@@ -250,44 +224,21 @@ public:
         if(readBuffer.length() == 0)
             return { NULL, NULL, NULL, false, ReturnCode::OK };
 
+        json data = json::parse(readBuffer);
 
-        struct json_value_s* root = json_parse(jsonString, strlen(jsonString));
+        unsigned long int progress_ms = data.value("progress_ms", 0);
 
-        struct json_object_s* object = (struct json_object_s*)root->payload;
+        std::string error = data.value("error", "");
 
-        struct json_object_element_s* errorElement = object->start;
-
-        if (strcmp(errorElement->name->string, "error") == 0) {
+        if (error.length() != 0) {
             return { NULL, NULL, NULL, false, ReturnCode::SERVER_ERROR };
         }
 
-        //if (strcmp(errorElement->name->string, "timestamp") == 0) { 
-        //    return { NULL, NULL, NULL, false, ReturnCode::OK };
-        //}
+        std::string id = data["item"].value("id", "");
 
-        struct json_object_element_s* progressElement = object->start->next->next;
+        std::string name = data["item"].value("name", "");
 
-        const char* progressString = json_value_as_number(progressElement->value)->number;
-
-        std::stringstream strValue;
-        strValue << progressString;
-
-        unsigned long int progress;
-        strValue >> progress;
-
-        struct json_object_s* itemObject = json_value_as_object(progressElement->next->value);
-
-        struct json_object_element_s* idElement = itemObject->start->next->next->next->next->next->next->next->next->next;
-
-        const char* id = _strdup(json_value_as_string(idElement->value)->string);
-
-        struct json_object_element_s* nameElement = idElement->next->next;
-
-        const char* name = _strdup(json_value_as_string(nameElement->value)->string);
-
-        CurrentSongData songData = { name, id, progress, true, ReturnCode::OK };
-
-        free(root);
+        CurrentSongData songData = { _strdup(name.c_str()), _strdup(id.c_str()), progress_ms, true, ReturnCode::OK};
 
         return songData;
     }
@@ -333,17 +284,18 @@ public:
         if (readBuffer.length() == 0)
             return Result::FAIL;
 
-        struct json_value_s* root = json_parse(jsonString, strlen(jsonString));
+        json data;
 
-        if (root == nullptr) {
-            return Result::FAIL;
+        try {
+            data = json::parse(readBuffer);
+        }
+        catch (nlohmann::json::parse_error& e) {
+            return Result::FAIL;  // If a parse error is thrown, it's not a valid JSON string
         }
 
-        struct json_object_s* object = (struct json_object_s*)root->payload;
+        std::string accessTokenString = data["accessToken"];
 
-        struct json_object_element_s* accessTokenElement = object->start->next;
-
-        accessToken = _strdup(json_value_as_string(accessTokenElement->value)->string);
+        accessToken = _strdup(accessTokenString.c_str());
 
         authorizationString = "authorization: Bearer ";
         authorizationString += accessToken;
@@ -354,8 +306,6 @@ public:
         slist1 = NULL;
 
         SP_DC = sp_dc;
-
-        free(root);
 
         return Result::SUCCESS;
     }
