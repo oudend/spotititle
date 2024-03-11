@@ -26,7 +26,9 @@
 #include "libs/romaji/romaji.h"
 #include "resource1.h"
 #include "Spotify.h"
-#include "SubtitleWindow.h";
+//#include "SubtitleWindow.h";
+
+#include "StylizedSubtitleWindow.h";
 
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_STANDARD_IO
@@ -80,7 +82,7 @@ bool SP_DC_VALID = false;
 
 int fontSize = 30;
 
-void calculateSubtitles(SubtitleWindow *subtitleWindow) {
+void calculateSubtitles(StylizedSubtitleWindow *subtitleWindow) {
     //free((char*)songData.id);
     //free((char*)songData.name);
 
@@ -118,11 +120,12 @@ void calculateSubtitles(SubtitleWindow *subtitleWindow) {
     }
 
     if (strcmp(name, currentSong) != 0) {
-        lyricsData.free_memory();
+        //lyricsData.free_memory();
         lyricsData = spotify.getLyrics(songData.id);
 
         currentSong = name;
         subtitleWindow->SetText(currentSong);
+        subtitleWindow->SetImage(songData.albumImageLink);
         //subtitleWindow->Update();
     }
 
@@ -149,14 +152,14 @@ void calculateSubtitles(SubtitleWindow *subtitleWindow) {
 
 VOID CALLBACK TimerRoutine(PVOID lpParam, BOOLEAN TimerOrWaitFired)
 {
-    calculateSubtitles((SubtitleWindow*)lpParam);
+    calculateSubtitles((StylizedSubtitleWindow*)lpParam);
 
     if (!ChangeTimerQueueTimer(hTimerQueue, hTimer, nextDisplayTextDelay, nextDisplayTextDelay))
         OutputDebugStringW(L"ChangeTimerQueueTimer failed\n");
 }
 
 
-int initializeTimer(SubtitleWindow *subtitleWindow) {
+int initializeTimer(StylizedSubtitleWindow *subtitleWindow) {
     hTimerQueue = CreateTimerQueue();
     if (NULL == hTimerQueue)
     {
@@ -176,7 +179,7 @@ int initializeTimer(SubtitleWindow *subtitleWindow) {
     return 0;
 }
 
-void setFontSize(SubtitleWindow* subtitleWindow, int fontSize) 
+void setFontSize(StylizedSubtitleWindow* subtitleWindow, int fontSize)
 {
     subtitleWindow->fontSize = fontSize;
 }
@@ -189,7 +192,7 @@ const char* themes[] = { "DEFAULT", "PURPLE" };
 Color themeValues[][4] = { {Color(15, 15, 15), Color(15, 15, 15), Color(200, 200, 255), Color(200, 200, 255)},
                            {Color(30, 30, 30), Color(15, 15, 15), Color(128, 0, 128), Color(95, 0, 95)} };
 
-void setTheme(SubtitleWindow* subtitleWindow, int theme) {
+void setTheme(StylizedSubtitleWindow* subtitleWindow, int theme) {
     subtitleWindow->textColorPrimary = themeValues[theme][0];
     subtitleWindow->textColorSecondary = themeValues[theme][1];
     subtitleWindow->backgroundColorPrimary = themeValues[theme][2];
@@ -203,10 +206,12 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     const int screenWidth = GetSystemMetrics(SM_CXSCREEN);
     const int screenHeight = GetSystemMetrics(SM_CYSCREEN);
 
-     SubtitleWindow subtitleWindow = SubtitleWindow(NOT_CONNECTED, hInstance, nCmdShow, screenWidth / 2, screenHeight, 200, 300);
+    StylizedSubtitleWindow subtitleWindow = StylizedSubtitleWindow(NOT_CONNECTED, hInstance, nCmdShow, screenWidth / 2, screenHeight, 200, 300);
 
-     setFontSize(&subtitleWindow, fontSize);
-     //subtitleWindow.Update();
+    subtitleWindow.useImage = false;
+
+    setFontSize(&subtitleWindow, fontSize);
+    //subtitleWindow.Update();
 
     GdiFont* font;
     struct nk_context* ctx;
@@ -338,6 +343,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
             nk_checkbox_label(ctx, "convert kana to romaji", &kanaToRomaji);
 
+            nk_checkbox_label(ctx, "use image background", &subtitleWindow.useImage);
+
             nk_layout_row_dynamic(ctx, 30, 2);
             int prev_theme = theme;
             theme = nk_combo(ctx, themes, 2, theme, 25, nk_vec2(200, 200));
@@ -366,26 +373,26 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
             nk_layout_row_static(ctx, 30, (WINDOW_WIDTH - 100) / 2, 2);
             if (nk_slider_int(ctx, 1000, &idleUpdateDelay, 4000, 1)) {
-                calculateSubtitles(&subtitleWindow);
+                //calculateSubtitles(&subtitleWindow);
             }
-            int idleUpdateDelayTemp = idleUpdateDelay;
+            //int idleUpdateDelayTemp = idleUpdateDelay;
             idleUpdateDelay = nk_propertyi(ctx, "delay:", 1000, idleUpdateDelay, 4000, 1, 0.5f);
-            if (idleUpdateDelayTemp != idleUpdateDelay) {
+          /*  if (idleUpdateDelayTemp != idleUpdateDelay) {
                 calculateSubtitles(&subtitleWindow);
-            }
+            }*/
 
             nk_layout_row_static(ctx, 30, WINDOW_WIDTH, 1);
             nk_label(ctx, "delayOffset", NK_TEXT_CENTERED);
 
             nk_layout_row_static(ctx, 30, (WINDOW_WIDTH - 100) / 2, 2);
             if (nk_slider_int(ctx, -2000, &delayOffset, 2000, 1)) {
-                calculateSubtitles(&subtitleWindow);
+                //calculateSubtitles(&subtitleWindow);
             }
-            int delayOffsetTemp = delayOffset;
+            //int delayOffsetTemp = delayOffset;
             delayOffset = nk_propertyi(ctx, "offset:", -2000, delayOffset, 2000, 1, 0.5f);
-            if (delayOffsetTemp != delayOffset) {
+  /*          if (delayOffsetTemp != delayOffset) {
                 calculateSubtitles(&subtitleWindow);
-            }
+            }*/
 
             nk_layout_row_static(ctx, 30, WINDOW_WIDTH - 100, 1);
             nk_label(ctx, currentSong, NK_TEXT_CENTERED);

@@ -1,3 +1,5 @@
+#pragma once
+
 #include <curl\curl.h>
 
 #include <string>
@@ -15,8 +17,6 @@
 
 #include "libs/json/json.hpp"
 using json = nlohmann::json;
-
-#pragma once
 
 size_t SpotifyWriteCallback(char* contents, size_t size, size_t nmemb, void* userp);
 
@@ -47,6 +47,7 @@ public:
     struct CurrentSongData {
         const char* name;
         const char* id;
+        const char* albumImageLink;
         unsigned long int progress;
         bool listening;
         ReturnCode code;
@@ -222,23 +223,23 @@ public:
         slist1 = NULL;
 
         if(readBuffer.length() == 0)
-            return { NULL, NULL, NULL, false, ReturnCode::OK };
+            return { NULL, NULL, NULL, NULL, false, ReturnCode::OK };
 
         json data = json::parse(readBuffer);
 
         unsigned long int progress_ms = data.value("progress_ms", 0);
 
-        std::string error = data.value("error", "");
-
-        if (error.length() != 0) {
-            return { NULL, NULL, NULL, false, ReturnCode::SERVER_ERROR };
+        if (data.contains("error")) {
+            return { NULL, NULL, NULL, NULL,false, ReturnCode::SERVER_ERROR };
         }
 
         std::string id = data["item"].value("id", "");
 
         std::string name = data["item"].value("name", "");
 
-        CurrentSongData songData = { _strdup(name.c_str()), _strdup(id.c_str()), progress_ms, true, ReturnCode::OK};
+        std::string albumImageLink = data["item"]["album"]["images"][0].value("url", "");
+
+        CurrentSongData songData = { _strdup(name.c_str()), _strdup(id.c_str()), _strdup(albumImageLink.c_str()), progress_ms, true, ReturnCode::OK};
 
         return songData;
     }

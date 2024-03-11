@@ -1,5 +1,7 @@
 #pragma once
 
+#pragma comment(linker, "\"/manifestdependency:type='Win32' name='Microsoft.Windows.GdiPlus' version='1.1.0.0' processorArchitecture='amd64' publicKeyToken='6595b64144ccf1df' language='*'\"")
+
 #include <windows.h>
 
 #include <iostream>
@@ -15,13 +17,23 @@
 #include <string.h>
 #include <limits.h>
 #include <time.h>
+#include <functional>
+
+#include <curl\curl.h>
+
+#define GDIPVER     0x0110  // Use more advanced GDI+ features
 
 #include <gdiplus.h>
 using namespace Gdiplus;
 #pragma comment (lib, "gdiplus.lib")
+#include <gdipluseffects.h>
 
 class SubtitleWindow
 {
+protected:
+    void virtual DrawSubtitleBackground(Graphics* graphics, RectF* destRect);
+    void virtual DrawSubtitleText(Graphics* graphics, std::wstring* displayText, PointF* point, Font* font, RectF* destRect);
+
 public:
     const char* displayText;
 
@@ -31,13 +43,10 @@ public:
     Color backgroundColorPrimary;
     Color backgroundColorSecondary;
 
-    //Matrix backgroundGradientRotationMatrix;
     Matrix* backgroundGradientRotationMatrix;
 
     WNDCLASS subtitleWc;
     HWND hwnd;
-
-    //HFONT hFont;
 
     int width;
     int height;
@@ -50,13 +59,9 @@ public:
 
     void SetDimensions(int width, int height);
 
-    //void SetFont(const char* name, int size);
-
-    //void SetFont(HFONT font);
-
     void SetText(const char* text);
 
-    void Update();
+    void virtual Update();
 
     void Hide();
 
@@ -109,7 +114,7 @@ public:
 
         backgroundGradientRotationMatrix = new Matrix();
 
-        SetTimer(hwnd, 66, 66, NULL);
+        SetTimer(hwnd, 33, 33, NULL);
 
         Show();
     }

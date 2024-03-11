@@ -1,18 +1,48 @@
 #include "SubtitleWindow.h"
 
+void SubtitleWindow::DrawSubtitleBackground(Graphics* graphics, RectF* destRect)
+{
+    LinearGradientBrush backgroundBrush(*destRect, backgroundColorPrimary, backgroundColorSecondary, LinearGradientModeHorizontal);
+    backgroundBrush.SetGammaCorrection(TRUE);
+    graphics->FillRectangle(&backgroundBrush, *destRect);
+}
+
+void SubtitleWindow::DrawSubtitleText(Graphics* graphics, std::wstring* displayText, PointF* point, Font* font, RectF* destRect)
+{
+    StringFormat format;
+    format.SetAlignment(StringAlignmentCenter);
+    format.SetLineAlignment(StringAlignmentNear);
+
+    LinearGradientBrush textBrush(*destRect, textColorPrimary, textColorSecondary, LinearGradientModeHorizontal);
+
+    textBrush.SetGammaCorrection(TRUE);
+
+    GraphicsPath path;
+
+    //path.AddString();
+
+    Point point2(point->X, point->Y);
+
+    FontFamily fontFamily(L"Consolas");
+
+    path.AddString(displayText->c_str(), -1, &fontFamily, FontStyleRegular, fontSize, point2, &format);
+
+    // Draw outline
+    Pen pen(Color(255, 255, 255, 255), 2);  // Black outline
+    graphics->DrawPath(&pen, &path);
+
+    // Fill path
+    SolidBrush  solidBrush(Color(255, 255, 0, 0));  // Red text
+    graphics->FillPath(&textBrush, &path);
+
+    //graphics->DrawString(displayText->c_str(), -1, font, *point, &format, &textBrush);
+}
+
 void SubtitleWindow::SetDimensions(int width, int height)
 {
     this->width = width;
     this->height = height;
 }
-
-//void SubtitleWindow::SetFont(const char* name, int size)
-//{
-//    hFont = CreateFontA(size, 0, 1, ORIENTATION_PREFERENCE_NONE, FW_SEMIBOLD,
-//        FW_DONTCARE, FW_DONTCARE, FW_DONTCARE, ANSI_CHARSET,
-//        OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, FIXED_PITCH,
-//        name);
-//}
 
 void SubtitleWindow::SetText(const char* text)
 {
@@ -28,11 +58,6 @@ void SubtitleWindow::Show()
 {
     ShowWindow(hwnd, SW_SHOW);
 }
-
-//void SubtitleWindow::SetFont(HFONT font)
-//{
-//    hFont = font;
-//}
 
 void SubtitleWindow::Update()
 {
@@ -88,16 +113,17 @@ LRESULT SubtitleWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM l
 
         //FillRect(hdc, &ps.rcPaint, brush2);
 
-        Graphics gr(hdcBuffer);
+        Graphics graphics(hdcBuffer);
+
+        graphics.SetSmoothingMode(SmoothingModeAntiAlias);
 
         SolidBrush solidBrush(Color::Black);
 
-        gr.FillRectangle(&solidBrush, RectF(ps.rcPaint.left, ps.rcPaint.top, (ps.rcPaint.right - ps.rcPaint.left), (ps.rcPaint.bottom - ps.rcPaint.top)));
+        graphics.FillRectangle(&solidBrush, RectF(ps.rcPaint.left, ps.rcPaint.top, (ps.rcPaint.right - ps.rcPaint.left), (ps.rcPaint.bottom - ps.rcPaint.top)));
 
         FontFamily fontFamily(L"Consolas");
 
-        //FontFamily::GenericSerif()
-        Font font(&fontFamily, subtitleWindow->fontSize, FontStyleRegular);
+        Font font(&fontFamily, subtitleWindow->fontSize, FontStyleRegular, UnitPixel);
 
         StringFormat format;
         format.SetAlignment(StringAlignmentCenter);
@@ -107,21 +133,19 @@ LRESULT SubtitleWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM l
         
         PointF point((ps.rcPaint.right - ps.rcPaint.left) * 0.5, 0);
         
-        gr.MeasureString(wcDisplayText.c_str(), -1,
+        graphics.MeasureString(wcDisplayText.c_str(), -1,
             &font, point, &format, &boundRect);
 
         LinearGradientBrush textBrush(boundRect, subtitleWindow->textColorPrimary, subtitleWindow->textColorSecondary, LinearGradientModeHorizontal);
         LinearGradientBrush backgroundBrush(boundRect, subtitleWindow->backgroundColorPrimary, subtitleWindow->backgroundColorSecondary, LinearGradientModeHorizontal);
 
         textBrush.SetGammaCorrection(TRUE);
-        backgroundBrush.SetGammaCorrection(TRUE);
 
-        gr.FillRectangle(&backgroundBrush, boundRect);
+        subtitleWindow->DrawSubtitleBackground(&graphics, &boundRect);
 
-        Status st = gr.DrawString(wcDisplayText.c_str(), -1, &font, point, &format, &textBrush);
+        subtitleWindow->DrawSubtitleText(&graphics, &wcDisplayText, &point, &font, &boundRect);
 
         BitBlt(hdc, 0, 0, rect.right, rect.bottom, hdcBuffer, 0, 0, SRCCOPY);
-
 
         SelectObject(hdcBuffer, hbmOldBuffer);
         DeleteObject(hbmBuffer);
