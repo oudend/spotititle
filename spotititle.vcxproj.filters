@@ -18,9 +18,6 @@
     <ClCompile Include="Spotititle.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="SongParser.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Spotify.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -39,9 +36,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource1.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SongParser.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Spotify.h">

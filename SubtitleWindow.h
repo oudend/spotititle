@@ -79,10 +79,10 @@ public:
         RegisterClass(&subtitleWc);
 
         hwnd = CreateWindowEx(
-            WS_EX_TOPMOST,// | WS_EX_TRANSPARENT,   // Optional window styles.
+            WS_EX_TOPMOST | WS_EX_LAYERED, //| WS_EX_LAYERED,// | WS_EX_TRANSPARENT,   // Optional window styles.
             CLASS_NAME,                     // Window class
             L"Spotify Lyrics",    // Window text
-            WS_OVERLAPPEDWINDOW | WS_POPUP | WS_BORDER,            // Window style
+            (WS_OVERLAPPEDWINDOW | WS_POPUP | WS_SYSMENU) & ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU | WS_BORDER),            // Window style
             x, y, width, height, // Size and position
             NULL,       // Parent window    
             NULL,       // Menu
@@ -92,16 +92,23 @@ public:
 
         SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)this); // store the class context in the window to be used by WindowProc
 
-        long Style = (WS_CAPTION | WS_SYSMENU);
-        long a = SetWindowLongA(hwnd, GWL_STYLE, Style & ~WS_BORDER);
+        //long Style = (WS_CAPTION | WS_SYSMENU);
+        //long a = SetWindowLongA(hwnd, GWL_STYLE, Style & ~WS_BORDER);
 
-        SetWindowLong(hwnd, GWL_EXSTYLE, GetWindowLong(hwnd, GWL_EXSTYLE) | WS_EX_LAYERED);
+        //SetWindowLong(hwnd, GWL_EXSTYLE, GetWindowLong(hwnd, GWL_EXSTYLE) | WS_EX_LAYERED);
 
-        LONG lStyle = GetWindowLong(hwnd, GWL_STYLE);
+       /* LONG lStyle = GetWindowLong(hwnd, GWL_STYLE);
         lStyle &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU);
-        SetWindowLong(hwnd, GWL_STYLE, lStyle);
+        SetWindowLong(hwnd, GWL_STYLE, lStyle);*/
 
-        SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), 0, LWA_COLORKEY);
+
+        //HRGN GGG = CreateRectRgn(0, 0, 1920, 1200); // Create a region (adjust dimensions as needed)
+        //InvertRgn(GetDC(hwnd), GGG); // Invert the region (makes the window transparent)
+        //SetWindowRgn(hwnd, GGG, false);
+
+        SetLayeredWindowAttributes(hwnd, RGB(0,0,0), 0, LWA_COLORKEY);
+
+        //SetLayeredWindowAttributes(hwnd, RGB(0, 25, 0), 255, LWA_COLORKEY);
 
         GdiplusStartupInput gdiplusStartupInput;
         ULONG_PTR           gdiplusToken;
@@ -114,7 +121,7 @@ public:
 
         backgroundGradientRotationMatrix = new Matrix();
 
-        SetTimer(hwnd, 33, 33, NULL);
+        SetTimer(hwnd, 66, 66, NULL);
 
         Show();
     }

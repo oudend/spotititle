@@ -28,7 +28,7 @@ void SubtitleWindow::DrawSubtitleText(Graphics* graphics, std::wstring* displayT
     path.AddString(displayText->c_str(), -1, &fontFamily, FontStyleRegular, fontSize, point2, &format);
 
     // Draw outline
-    Pen pen(Color(255, 255, 255, 255), 2);  // Black outline
+    Pen pen(Color(100, 255, 255, 255), 2);  // Black outline
     graphics->DrawPath(&pen, &path);
 
     // Fill path
@@ -85,6 +85,11 @@ LRESULT SubtitleWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM l
         return 1;
     }
     break;
+    case WM_CTLCOLORSTATIC:
+    {
+
+    }
+    break;
     case WM_NCHITTEST:
     {
         // Make the entire window draggable
@@ -117,9 +122,9 @@ LRESULT SubtitleWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM l
 
         graphics.SetSmoothingMode(SmoothingModeAntiAlias);
 
-        SolidBrush solidBrush(Color::Black);
+        //SolidBrush solidBrush(Color::Black);
 
-        graphics.FillRectangle(&solidBrush, RectF(ps.rcPaint.left, ps.rcPaint.top, (ps.rcPaint.right - ps.rcPaint.left), (ps.rcPaint.bottom - ps.rcPaint.top)));
+        //graphics.FillRectangle(&solidBrush, RectF(ps.rcPaint.left, ps.rcPaint.top, (ps.rcPaint.right - ps.rcPaint.left), (ps.rcPaint.bottom - ps.rcPaint.top)));
 
         FontFamily fontFamily(L"Consolas");
 
@@ -146,6 +151,8 @@ LRESULT SubtitleWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM l
         subtitleWindow->DrawSubtitleText(&graphics, &wcDisplayText, &point, &font, &boundRect);
 
         BitBlt(hdc, 0, 0, rect.right, rect.bottom, hdcBuffer, 0, 0, SRCCOPY);
+
+        RectF windowRect(ps.rcPaint.left, ps.rcPaint.top, (ps.rcPaint.right - ps.rcPaint.left), (ps.rcPaint.bottom - ps.rcPaint.top));
 
         SelectObject(hdcBuffer, hbmOldBuffer);
         DeleteObject(hbmBuffer);

@@ -291,6 +291,7 @@ public:
             data = json::parse(readBuffer);
         }
         catch (nlohmann::json::parse_error& e) {
+            data.clear();
             return Result::FAIL;  // If a parse error is thrown, it's not a valid JSON string
         }
 

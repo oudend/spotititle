@@ -7,6 +7,33 @@ void StylizedSubtitleWindow::Update()
     UpdateWindow(hwnd);
 }
 
+void StylizedSubtitleWindow::DrawSubtitleText(Graphics* graphics, std::wstring* displayText, PointF* point, Font* font, RectF* destRect)
+{
+    if (!useImage || backgroundImage == nullptr) {
+        SubtitleWindow::DrawSubtitleText(graphics, displayText, point, font, destRect);
+        return;
+    }
+
+    StringFormat format;
+    format.SetAlignment(StringAlignmentCenter);
+    format.SetLineAlignment(StringAlignmentNear);
+
+    LinearGradientBrush textBrush(*destRect, textColorPrimary, textColorSecondary, LinearGradientModeHorizontal);
+
+    textBrush.SetGammaCorrection(TRUE);
+
+    GraphicsPath path;
+
+    Point point2(point->X, point->Y);
+
+    FontFamily fontFamily(L"Consolas");
+
+    path.AddString(displayText->c_str(), -1, &fontFamily, FontStyleRegular, fontSize, point2, &format);
+
+    SolidBrush  solidBrush(Color(150, 255, 255, 255));  // white text with 150/255 opacity
+    graphics->FillPath(&solidBrush, &path);
+}
+
 void StylizedSubtitleWindow::DrawSubtitleBackground(Graphics* graphics, RectF* destRect)
 {
     if (!useImage || backgroundImage == nullptr) {
@@ -18,7 +45,7 @@ void StylizedSubtitleWindow::DrawSubtitleBackground(Graphics* graphics, RectF* d
     UINT ImageHeight = backgroundImage->GetHeight();
     PointF center(ImageWidth / 2.0f, ImageHeight / 2.0f);
 
-    int scaleY = (destRect->Width / destRect->Height);// (boundRect.Width / boundRect.Height);
+    int scaleY = (destRect->Width / destRect->Height);
     int scaleX = (destRect->Height / destRect->Width);
 
     RectF sourceRect;
@@ -44,6 +71,18 @@ void StylizedSubtitleWindow::DrawSubtitleBackground(Graphics* graphics, RectF* d
     rotatedGraphics2->TranslateTransform(-center.X, -center.Y);
     rotatedGraphics2->DrawImage(backgroundImage, 0, 0, ImageWidth, ImageHeight);
 
+
+    ImageAttributes imageAttDarken;
+    ColorMatrix colorMatrixDarken =
+    {
+        1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+        0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+        -0.2f, -0.2f, -0.2f, 0.0f, 1.0f
+    };
+    imageAttDarken.SetColorMatrix(&colorMatrixDarken, ColorMatrixFlagsDefault, ColorAdjustTypeBitmap);
+
     ImageAttributes imageAtt;
     const float alphaPercent = 0.5f;  // 50% transparency
     ColorMatrix colorMatrix =
@@ -52,12 +91,15 @@ void StylizedSubtitleWindow::DrawSubtitleBackground(Graphics* graphics, RectF* d
         0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
         0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
         0.0f, 0.0f, 0.0f, alphaPercent, 0.0f,
-        0.0f, 0.0f, 0.0f, 0.0f, 1.0f
+        -0.2f, -0.2f, -0.2f, 0.0f, 1.0f
     };
     imageAtt.SetColorMatrix(&colorMatrix, ColorMatrixFlagsDefault, ColorAdjustTypeBitmap);
 
-    graphics->DrawImage(rotatedBitmap, *destRect, sourceRect, Unit::UnitPixel);
+    graphics->DrawImage(rotatedBitmap, *destRect, sourceRect, Unit::UnitPixel, &imageAttDarken);
     graphics->DrawImage(rotatedBitmap2, *destRect, sourceRect, Unit::UnitPixel, &imageAtt);
+
+    SolidBrush  solidBrush(Color(1, 255, 255, 255));
+    graphics->FillRectangle(&solidBrush, *destRect);
 
     delete rotatedGraphics2;
     delete rotatedBitmap2;

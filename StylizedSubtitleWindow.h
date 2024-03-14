@@ -34,7 +34,7 @@ class StylizedSubtitleWindow : public SubtitleWindow
 {
 protected:
     void virtual DrawSubtitleBackground(Graphics* graphics, RectF* destRect);
-    //void virtual DrawSubtitleText(Graphics* graphics, std::wstring* displayText, PointF* point, Font* font, RectF* destRect);
+    void virtual DrawSubtitleText(Graphics* graphics, std::wstring* displayText, PointF* point, Font* font, RectF* destRect);
 private:
     static size_t WriteCallbackLoadImageFromUrl(void* contents, size_t size, size_t nmemb, std::vector<BYTE>* s) {
         size_t newLength = size * nmemb;

@@ -1,0 +1,145 @@
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Spotititle Tools</title>
+    <style>
+      * {
+        margin: 0;
+      }
+
+      body,
+      html {
+        padding: 0;
+        margin: 0;
+        background-color: #121212;
+        font-family: "Montserrat", sans-serif;
+        color: white;
+        font-size: 14px;
+      }
+
+      main {
+        min-width: 20px;
+        max-width: 300px;
+        margin: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        /* align-items: center; */
+      }
+
+      .error {
+        text-align: center;
+        color: red;
+        background-color: #242424;
+        font-size: 12px;
+        pointer-events: none;
+        -webkit-user-select: none;
+        user-select: none;
+        /* width: 100%; */
+      }
+
+      .group {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+
+      textarea:focus,
+      input:focus {
+        outline: none;
+      }
+
+      input[type="text"] {
+        background-color: #242424;
+        color: inherit;
+        border: none;
+        border-radius: 6px;
+        font-size: 15px;
+        height: 40px;
+      }
+
+      input[type="text"]:hover {
+        border: 2px solid #6e6e6e46;
+      }
+
+      .button {
+        width: 100%;
+        padding: 15px;
+        border-radius: 6px;
+        background-color: #181818;
+        color: inherit;
+        cursor: pointer;
+        transition: all ease 0.4s;
+        border: none;
+      }
+
+      .button:hover {
+        background-color: #252525;
+      }
+
+      .slider {
+        width: 100%;
+      }
+    </style>
+
+    <script defer>
+      function checkbox(element) {
+        var inputValue = element.checked;
+        localStorage.setItem("toggle", inputValue);
+      }
+
+      window.onload = function () {
+        var inputValue =
+          localStorage.getItem("toggle") === "true" ? true : false;
+        if (inputValue !== undefined)
+          document.getElementById("toggle").checked = inputValue;
+      };
+    </script>
+  </head>
+  <body>
+    <main>
+      <div class="group">
+        <label for="SP_DC">SP_DC</label>
+        <input
+          type="text"
+          class="element"
+          id="SP_DC"
+          placeholder="SP_DC key goes here"
+          name="SP_DC"
+        />
+        <p class="error"><em>Invalid SP_DC</em></p>
+        <button class="button">Update SP_DC</button>
+      </div>
+
+      <button id="btn" onclick="buttonPressed()">button</button>
+
+      <div>
+        <label for="toggle">Lyrics Visible:</label>
+        <input
+          type="checkbox"
+          onclick="checkbox(this)"
+          id="toggle"
+          name="toggle"
+        /><br />
+      </div>
+
+      <label for="dropdown">Theme</label>
+      <select id="dropdown" name="dropdown" class="dropdown">
+        <option value="Default">Default</option>
+        <option value="Purple">Purple</option>
+      </select>
+
+      <label for="font-size">Font Size:</label>
+      <input
+        type="range"
+        id="font-size"
+        name="font-size"
+        min="1"
+        max="100"
+        class="slider"
+      />
+    </main>
+  </body>
+</html>

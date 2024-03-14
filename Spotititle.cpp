@@ -5,7 +5,10 @@
 #pragma warning(disable:4996)
 #pragma comment(lib, "msimg32.lib")
 
+//AppCore.lib;Ultralight.lib;UltralightCore.lib;WebCore.lib;
 //a
+
+//#include "SpotititleUI.h"
 
 #include <windows.h>
 
@@ -23,9 +26,14 @@
 #include <limits.h>
 #include <time.h>
 
+//#include <gtk-4.0\gtk\gtk.h>
+//#include <gtk\gtk.h>
+
 #include "libs/romaji/romaji.h"
 #include "resource1.h"
 #include "Spotify.h"
+
+
 //#include "SubtitleWindow.h";
 
 #include "StylizedSubtitleWindow.h";
@@ -38,6 +46,9 @@
 #define NK_GDI_IMPLEMENTATION
 #include "nuklear/nuklear.h"
 #include "nuklear/nuklear_gdi.h"
+
+//#include "SpotititleUI.h"
+//#include <AppCore/AppCore.h>
 
 #define NOT_LISTENING "not listening"
 #define NOT_SYNCED "lyrics not synced"
@@ -83,9 +94,6 @@ bool SP_DC_VALID = false;
 int fontSize = 30;
 
 void calculateSubtitles(StylizedSubtitleWindow *subtitleWindow) {
-    //free((char*)songData.id);
-    //free((char*)songData.name);
-
     songData = spotify.getCurrentlyPlaying();
 
     if (songData.code == Spotify::ReturnCode::SERVER_ERROR) {
@@ -100,7 +108,6 @@ void calculateSubtitles(StylizedSubtitleWindow *subtitleWindow) {
         nextDisplayText = NOT_LISTENING;
 
         subtitleWindow->SetText(NOT_LISTENING);
-        //subtitleWindow->Update();
         return;
     }
 
@@ -115,25 +122,21 @@ void calculateSubtitles(StylizedSubtitleWindow *subtitleWindow) {
 
 
     if (progress >= nextDisplayTextProgress) {
-        subtitleWindow->SetText(nextDisplayText);
-        //subtitleWindow->Update();
+        subtitleWindow->SetText(_strdup(nextDisplayText));
     }
 
     if (strcmp(name, currentSong) != 0) {
-        //lyricsData.free_memory();
         lyricsData = spotify.getLyrics(songData.id);
 
         currentSong = name;
         subtitleWindow->SetText(currentSong);
         subtitleWindow->SetImage(songData.albumImageLink);
-        //subtitleWindow->Update();
     }
 
     if (lyricsData.syncType != Spotify::SyncType::LINE_SYNCED || lyricsData.lyricsTimeData.empty()) {
         nextDisplayTextDelay = idleUpdateDelay;
         nextDisplayText = NOT_SYNCED;
         subtitleWindow->SetText(NOT_SYNCED);
-        //subtitleWindow->Update();
     }
     else
     {
@@ -201,23 +204,20 @@ void setTheme(StylizedSubtitleWindow* subtitleWindow, int theme) {
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
 {
-    // Register the window class.
-
     const int screenWidth = GetSystemMetrics(SM_CXSCREEN);
     const int screenHeight = GetSystemMetrics(SM_CYSCREEN);
 
-    StylizedSubtitleWindow subtitleWindow = StylizedSubtitleWindow(NOT_CONNECTED, hInstance, nCmdShow, screenWidth / 2, screenHeight, 200, 300);
+    StylizedSubtitleWindow subtitleWindow = StylizedSubtitleWindow(NOT_CONNECTED, hInstance, nCmdShow, screenWidth, screenHeight, 200, 300);
 
     subtitleWindow.useImage = false;
 
     setFontSize(&subtitleWindow, fontSize);
-    //subtitleWindow.Update();
 
     GdiFont* font;
     struct nk_context* ctx;
 
     RECT rect = { 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT };
-    DWORD style = WS_OVERLAPPEDWINDOW;
+    DWORD style = WS_OVERLAPPED | WS_SYSMENU | WS_MINIMIZEBOX;
     DWORD exstyle = WS_EX_APPWINDOW;
     HDC dc;
 
@@ -251,11 +251,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
     setTheme(&subtitleWindow, theme);
 
-   /* Color textColorPrimary;
-    Color textColorSecondary;
-
-    Color backgroundColorPrimary;
-    Color backgroundColorSecondary;*/
 
     while (running) {
         /* Input */
@@ -358,13 +353,11 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
             nk_layout_row_static(ctx, 30, (WINDOW_WIDTH - 100) / 2, 2);
             if (nk_slider_int(ctx, 6, &fontSize, 50, 1)) {
                 setFontSize(&subtitleWindow, fontSize);
-                //subtitleWindow.Update();
             }
             int fontSizeTemp = fontSize;
             fontSize = nk_propertyi(ctx, "size:", 6, fontSize, 50, 1, 0.5f);
             if (fontSizeTemp != fontSize) {
                 setFontSize(&subtitleWindow, fontSize);
-                //subtitleWindow.Update();
             }
             
 
@@ -372,27 +365,15 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
             nk_label(ctx, "idleUpdateDelay", NK_TEXT_CENTERED);
 
             nk_layout_row_static(ctx, 30, (WINDOW_WIDTH - 100) / 2, 2);
-            if (nk_slider_int(ctx, 1000, &idleUpdateDelay, 4000, 1)) {
-                //calculateSubtitles(&subtitleWindow);
-            }
-            //int idleUpdateDelayTemp = idleUpdateDelay;
+            nk_slider_int(ctx, 1000, &idleUpdateDelay, 4000, 1);
             idleUpdateDelay = nk_propertyi(ctx, "delay:", 1000, idleUpdateDelay, 4000, 1, 0.5f);
-          /*  if (idleUpdateDelayTemp != idleUpdateDelay) {
-                calculateSubtitles(&subtitleWindow);
-            }*/
 
             nk_layout_row_static(ctx, 30, WINDOW_WIDTH, 1);
             nk_label(ctx, "delayOffset", NK_TEXT_CENTERED);
 
             nk_layout_row_static(ctx, 30, (WINDOW_WIDTH - 100) / 2, 2);
-            if (nk_slider_int(ctx, -2000, &delayOffset, 2000, 1)) {
-                //calculateSubtitles(&subtitleWindow);
-            }
-            //int delayOffsetTemp = delayOffset;
+            nk_slider_int(ctx, -2000, &delayOffset, 2000, 1);
             delayOffset = nk_propertyi(ctx, "offset:", -2000, delayOffset, 2000, 1, 0.5f);
-  /*          if (delayOffsetTemp != delayOffset) {
-                calculateSubtitles(&subtitleWindow);
-            }*/
 
             nk_layout_row_static(ctx, 30, WINDOW_WIDTH - 100, 1);
             nk_label(ctx, currentSong, NK_TEXT_CENTERED);
