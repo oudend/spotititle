@@ -141,11 +141,6 @@ LRESULT SubtitleWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM l
         graphics.MeasureString(wcDisplayText.c_str(), -1,
             &font, point, &format, &boundRect);
 
-        LinearGradientBrush textBrush(boundRect, subtitleWindow->textColorPrimary, subtitleWindow->textColorSecondary, LinearGradientModeHorizontal);
-        LinearGradientBrush backgroundBrush(boundRect, subtitleWindow->backgroundColorPrimary, subtitleWindow->backgroundColorSecondary, LinearGradientModeHorizontal);
-
-        textBrush.SetGammaCorrection(TRUE);
-
         subtitleWindow->DrawSubtitleBackground(&graphics, &boundRect);
 
         subtitleWindow->DrawSubtitleText(&graphics, &wcDisplayText, &point, &font, &boundRect);

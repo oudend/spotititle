@@ -36,6 +36,7 @@ void StylizedSubtitleWindow::DrawSubtitleText(Graphics* graphics, std::wstring* 
 
 void StylizedSubtitleWindow::DrawSubtitleBackground(Graphics* graphics, RectF* destRect)
 {
+
     if (backgroundBitmap == nullptr) {
         SubtitleWindow::DrawSubtitleBackground(graphics, destRect);
         return;
@@ -101,9 +102,6 @@ void StylizedSubtitleWindow::DrawSubtitleBackground(Graphics* graphics, RectF* d
     graphics->DrawImage(rotatedBitmap, *destRect, sourceRect, Unit::UnitPixel, &imageAttDarken);
     graphics->DrawImage(rotatedBitmap2, *destRect, sourceRect, Unit::UnitPixel, &imageAtt);
 
-    SolidBrush  solidBrush(Color(1, 255, 255, 255));
-    graphics->FillRectangle(&solidBrush, *destRect);
-
     delete rotatedGraphics2;
     delete rotatedBitmap2;
 
@@ -160,26 +158,8 @@ void StylizedSubtitleWindow::SetTheme(Theme theme)
     themeGraphics->TranslateTransform(-250, -250);
 
     // Create a solid brush in purple color
-    SolidBrush* themeBrush = new SolidBrush(Color::GhostWhite);
 
-    switch (theme)
-    {
-    case Theme::Purple:
-    {
-        themeBrush = new SolidBrush(Color::Purple);
-    }
-    break;
-    case Theme::Green:
-    {
-        themeBrush = new SolidBrush(Color::ForestGreen);
-    }
-    break;
-    case Theme::Orange:
-    {
-        themeBrush = new SolidBrush(Color::Orange);
-    }
-    break;
-    }
+    SolidBrush* themeBrush = new SolidBrush(themeColors[theme]);
     
     // Get the color of the purple brush
     Color themeColor;

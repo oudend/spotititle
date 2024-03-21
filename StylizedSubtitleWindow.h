@@ -105,9 +105,12 @@ public:
         Purple = 0,
         Green = 1,
         Orange = 2,
-        Image = 3
+        Blue = 3,
+        Red = 4,
+        Image = 5
     };
-    const char* themes[4] = {"Purple", "Green", "Orange", "Image"};
+    const int themeColors[6] = {Color::Purple, Color::ForestGreen, Color::Orange, Color::CornflowerBlue, Color::MediumVioletRed,Color::GhostWhite};
+    const char* themes[6] = {"Purple", "Green", "Orange", "Blue", "Red", "Image"};
 
 private:
     Theme currentTheme;
