@@ -71,7 +71,7 @@ static int showLyrics = 1;
 int delayOffset = 0;
 
 int WINDOW_WIDTH = 300; //rename :(
-int WINDOW_HEIGHT = 600;
+int WINDOW_HEIGHT = 800;
 
 char SP_DC[200];
 
@@ -127,10 +127,27 @@ void calculateSubtitles(StylizedSubtitleWindow *subtitleWindow) {
 
     if (strcmp(name, currentSong) != 0) {
         lyricsData = spotify.getLyrics(songData.id);
-
         currentSong = name;
-        subtitleWindow->SetText(currentSong);
+
+        if (lyricsData.syncType == Spotify::SyncType::LINE_SYNCED && !lyricsData.lyricsTimeData.empty()) {
+            Spotify::LyricData currentLyricData = Spotify::calculateCurrentLyric(progress, lyricsData.lyricsTimeData);
+
+            if (progress - currentLyricData.closestLyricsTimeData.elapsedTime > 0) //we have not reached the first line lyric yet
+            {
+                subtitleWindow->SetText(currentSong);
+            }
+            else {
+                subtitleWindow->SetText(currentLyricData.lineLyric);
+            }
+        }
+        else {
+            subtitleWindow->SetText(currentSong);
+            nextDisplayText = currentSong;
+            return;
+        }
+
         subtitleWindow->SetImage(songData.albumImageLink);
+
     }
 
     if (lyricsData.syncType != Spotify::SyncType::LINE_SYNCED || lyricsData.lyricsTimeData.empty()) {
@@ -147,8 +164,13 @@ void calculateSubtitles(StylizedSubtitleWindow *subtitleWindow) {
 
         if (kanaToRomaji == 1) {
             romaji = "";
-            japanese::utf8_kana_to_romaji(currentLyricData.lineLyric, romaji);
-            nextDisplayText = romaji.c_str();
+            try {
+                japanese::utf8_kana_to_romaji(currentLyricData.lineLyric, romaji);
+                nextDisplayText = romaji.c_str();
+            }
+            catch (const std::exception& e) {
+                nextDisplayText = currentLyricData.lineLyric;
+            }
         }
     }
 }
@@ -187,20 +209,7 @@ void setFontSize(StylizedSubtitleWindow* subtitleWindow, int fontSize)
     subtitleWindow->fontSize = fontSize;
 }
 
-enum Theme { DEFAULT, PURPLE };
-static int theme = Theme::DEFAULT;
-
-const char* themes[] = { "DEFAULT", "PURPLE" };
-
-Color themeValues[][4] = { {Color(15, 15, 15), Color(15, 15, 15), Color(200, 200, 255), Color(200, 200, 255)},
-                           {Color(30, 30, 30), Color(15, 15, 15), Color(128, 0, 128), Color(95, 0, 95)} };
-
-void setTheme(StylizedSubtitleWindow* subtitleWindow, int theme) {
-    subtitleWindow->textColorPrimary = themeValues[theme][0];
-    subtitleWindow->textColorSecondary = themeValues[theme][1];
-    subtitleWindow->backgroundColorPrimary = themeValues[theme][2];
-    subtitleWindow->backgroundColorSecondary = themeValues[theme][3];
-}
+static int theme = StylizedSubtitleWindow::Theme::Purple;
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
 {
@@ -209,7 +218,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
     StylizedSubtitleWindow subtitleWindow = StylizedSubtitleWindow(NOT_CONNECTED, hInstance, nCmdShow, screenWidth, screenHeight, 200, 300);
 
-    subtitleWindow.useImage = false;
+    subtitleWindow.SetTheme(static_cast<StylizedSubtitleWindow::Theme>(theme));
 
     setFontSize(&subtitleWindow, fontSize);
 
@@ -248,8 +257,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
     int running = 1;
     int needs_refresh = 1;
-
-    setTheme(&subtitleWindow, theme);
 
 
     while (running) {
@@ -338,13 +345,14 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
             nk_checkbox_label(ctx, "convert kana to romaji", &kanaToRomaji);
 
-            nk_checkbox_label(ctx, "use image background", &subtitleWindow.useImage);
+            //nk_checkbox_label(ctx, "use image background", &subtitleWindow.useImage);
 
             nk_layout_row_dynamic(ctx, 30, 2);
             int prev_theme = theme;
-            theme = nk_combo(ctx, themes, 2, theme, 25, nk_vec2(200, 200));
+            theme = nk_combo(ctx, subtitleWindow.themes, sizeof(subtitleWindow.themes) / sizeof(subtitleWindow.themes[0]), theme, 25, nk_vec2(200, 200));
             if (theme != prev_theme) {
-                setTheme(&subtitleWindow, theme);
+                subtitleWindow.SetTheme(static_cast<StylizedSubtitleWindow::Theme>(theme));
+                //setTheme(&subtitleWindow, theme);
             }
 
             nk_layout_row_static(ctx, 30, WINDOW_WIDTH, 1);

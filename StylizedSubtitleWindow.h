@@ -100,19 +100,36 @@ private:
     }
 
 public:
-    Bitmap* backgroundImage;
+    enum Theme
+    {
+        Purple = 0,
+        Green = 1,
+        Orange = 2,
+        Image = 3
+    };
+    const char* themes[4] = {"Purple", "Green", "Orange", "Image"};
+
+private:
+    Theme currentTheme;
+public:
+
+    Bitmap* loadedImage = nullptr;
+    Bitmap* backgroundBitmap = nullptr;
+
+
+    Bitmap* BlurBitmap(Bitmap* bitmap, int radius = 40);
 
     void SetImage(const char* url);
 
-    int useImage = 1;
+    void SetTheme(Theme theme);
 
     void Update();
 
     int angle = 90;
 
-	StylizedSubtitleWindow(const char* displayText, HINSTANCE hInstance, int nCmdShow, int width, int height, int x, int y) : SubtitleWindow(displayText, hInstance, nCmdShow, width, height, x, y)
-	{
-
-	}
+    StylizedSubtitleWindow(const char* displayText, HINSTANCE hInstance, int nCmdShow, int width, int height, int x, int y) : SubtitleWindow(displayText, hInstance, nCmdShow, width, height, x, y) 
+    {
+        SetTheme(Theme::Purple);
+    }
 };
 

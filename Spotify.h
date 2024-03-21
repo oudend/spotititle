@@ -25,7 +25,7 @@ class Spotify
 private:
     const char* accessToken = "";
     std::string authorizationString;
-    const char* SP_DC;
+    const char* SP_DC = "";
 
 public:
     enum class Result {
@@ -132,6 +132,25 @@ public:
             if (timestamp < currentLyricsTimeData.elapsedTime) {
                 break;
             }
+        }
+
+        return { closestLyricsTimeData.elapsedTime - timestamp, closestLyricsTimeData.lineLyric, closestLyricsTimeData };
+    }
+
+    static LyricData calculateCurrentLyric(unsigned long int timestamp, std::vector<LyricsTimeData> lyricsTimeData) {
+        int vecSize = lyricsTimeData.size();
+
+        LyricsTimeData closestLyricsTimeData = lyricsTimeData[0];
+
+        for (int i = 0; i < vecSize; i++)
+        {
+            LyricsTimeData currentLyricsTimeData = lyricsTimeData[i];
+
+            if (timestamp < currentLyricsTimeData.elapsedTime) {
+                break;
+            }
+
+            closestLyricsTimeData = currentLyricsTimeData;
         }
 
         return { closestLyricsTimeData.elapsedTime - timestamp, closestLyricsTimeData.lineLyric, closestLyricsTimeData };
@@ -280,6 +299,11 @@ public:
 
         ret = curl_easy_perform(hnd);
 
+        curl_easy_cleanup(hnd);
+        hnd = NULL;
+        curl_slist_free_all(slist1);
+        slist1 = NULL;
+
         const char* jsonString = readBuffer.c_str();
 
         if (readBuffer.length() == 0)
@@ -302,10 +326,6 @@ public:
         authorizationString = "authorization: Bearer ";
         authorizationString += accessToken;
 
-        curl_easy_cleanup(hnd);
-        hnd = NULL;
-        curl_slist_free_all(slist1);
-        slist1 = NULL;
 
         SP_DC = sp_dc;
 

@@ -9,7 +9,7 @@ void StylizedSubtitleWindow::Update()
 
 void StylizedSubtitleWindow::DrawSubtitleText(Graphics* graphics, std::wstring* displayText, PointF* point, Font* font, RectF* destRect)
 {
-    if (!useImage || backgroundImage == nullptr) {
+    if (backgroundBitmap == nullptr) {
         SubtitleWindow::DrawSubtitleText(graphics, displayText, point, font, destRect);
         return;
     }
@@ -36,13 +36,13 @@ void StylizedSubtitleWindow::DrawSubtitleText(Graphics* graphics, std::wstring* 
 
 void StylizedSubtitleWindow::DrawSubtitleBackground(Graphics* graphics, RectF* destRect)
 {
-    if (!useImage || backgroundImage == nullptr) {
+    if (backgroundBitmap == nullptr) {
         SubtitleWindow::DrawSubtitleBackground(graphics, destRect);
         return;
     }
 
-    UINT ImageWidth = backgroundImage->GetWidth();
-    UINT ImageHeight = backgroundImage->GetHeight();
+    UINT ImageWidth = backgroundBitmap->GetWidth();
+    UINT ImageHeight = backgroundBitmap->GetHeight();
     PointF center(ImageWidth / 2.0f, ImageHeight / 2.0f);
 
     int scaleY = (destRect->Width / destRect->Height);
@@ -51,7 +51,7 @@ void StylizedSubtitleWindow::DrawSubtitleBackground(Graphics* graphics, RectF* d
     RectF sourceRect;
 
     if (destRect->Width > destRect->Height)
-        sourceRect = RectF(0, (ImageHeight / scaleY) / 2, ImageWidth, ImageHeight / scaleY);
+        sourceRect = RectF(0, (ImageHeight / scaleY) / 2.0f, ImageWidth - 1, ImageHeight / scaleY);
     else
         sourceRect = RectF(0, 0, ImageWidth, ImageHeight);
 
@@ -61,16 +61,18 @@ void StylizedSubtitleWindow::DrawSubtitleBackground(Graphics* graphics, RectF* d
     rotatedGraphics->RotateTransform(angle);
     rotatedGraphics->ScaleTransform(2, 2);
     rotatedGraphics->TranslateTransform(-center.X, -center.Y);
-    rotatedGraphics->DrawImage(backgroundImage, 0, 0, ImageWidth, ImageHeight);
+    rotatedGraphics->DrawImage(backgroundBitmap, 0, 0, ImageWidth, ImageHeight);
 
     Bitmap* rotatedBitmap2 = new Bitmap(ImageWidth, ImageHeight);
-    Graphics* rotatedGraphics2 = Graphics::FromImage(rotatedBitmap);
+    Graphics* rotatedGraphics2 = Graphics::FromImage(rotatedBitmap2);
     rotatedGraphics2->TranslateTransform(center.X, center.Y);
+    rotatedGraphics->RotateTransform(angle);
     rotatedGraphics2->RotateTransform(360 - ((angle + 40) % 360));
     rotatedGraphics2->ScaleTransform(2, 2);
     rotatedGraphics2->TranslateTransform(-center.X, -center.Y);
-    rotatedGraphics2->DrawImage(backgroundImage, 0, 0, ImageWidth, ImageHeight);
+    rotatedGraphics2->DrawImage(backgroundBitmap, 0, 0, ImageWidth, ImageHeight);
 
+    float brightness = 0.1f;
 
     ImageAttributes imageAttDarken;
     ColorMatrix colorMatrixDarken =
@@ -78,10 +80,11 @@ void StylizedSubtitleWindow::DrawSubtitleBackground(Graphics* graphics, RectF* d
         1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
         0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
         0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
-        0.0f, 0.0f, 0.0f, 1.0f, 0.0f,
-        -0.2f, -0.2f, -0.2f, 0.0f, 1.0f
+        0.0f, 0.0f, 0.0f, 0.5f, 0.0f,
+        brightness, brightness, brightness, 0.0f, 1.0f
     };
     imageAttDarken.SetColorMatrix(&colorMatrixDarken, ColorMatrixFlagsDefault, ColorAdjustTypeBitmap);
+
 
     ImageAttributes imageAtt;
     const float alphaPercent = 0.5f;  // 50% transparency
@@ -91,7 +94,7 @@ void StylizedSubtitleWindow::DrawSubtitleBackground(Graphics* graphics, RectF* d
         0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
         0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
         0.0f, 0.0f, 0.0f, alphaPercent, 0.0f,
-        -0.2f, -0.2f, -0.2f, 0.0f, 1.0f
+        brightness, brightness, brightness, 0.0f, 1.0f
     };
     imageAtt.SetColorMatrix(&colorMatrix, ColorMatrixFlagsDefault, ColorAdjustTypeBitmap);
 
@@ -108,18 +111,19 @@ void StylizedSubtitleWindow::DrawSubtitleBackground(Graphics* graphics, RectF* d
     delete rotatedBitmap;
 }
 
-void StylizedSubtitleWindow::SetImage(const char* url) {
-    backgroundImage = LoadImageFromUrl(url);
+Bitmap* StylizedSubtitleWindow::BlurBitmap(Bitmap* bitmap, int radius)
+{
+    //loadedImage = bitmap;
 
     Blur blurEffect;
 
     BlurParams blurParams;
-    blurParams.radius = 40;
+    blurParams.radius = radius;
 
     blurEffect.SetParameters(&blurParams);
 
-    UINT ImageWidth = backgroundImage->GetWidth();
-    UINT ImageHeight = backgroundImage->GetHeight();
+    UINT ImageWidth = bitmap->GetWidth();
+    UINT ImageHeight = bitmap->GetHeight();
 
     RECT rect;
     rect.left = 0;
@@ -127,5 +131,81 @@ void StylizedSubtitleWindow::SetImage(const char* url) {
     rect.right = width;
     rect.bottom = height;
 
-    backgroundImage->ApplyEffect(&blurEffect, &rect);
+    bitmap->ApplyEffect(&blurEffect, &rect);
+
+    return bitmap;
+}
+
+void StylizedSubtitleWindow::SetImage(const char* url) {
+    loadedImage = BlurBitmap(LoadImageFromUrl(url));
+
+    if (currentTheme == Theme::Image)
+        backgroundBitmap = loadedImage;
+}
+
+void StylizedSubtitleWindow::SetTheme(Theme theme)
+{
+    currentTheme = theme;
+
+    if (theme == Theme::Image && loadedImage != nullptr) {
+        backgroundBitmap = loadedImage;
+        return;
+    }
+
+    backgroundBitmap = new Bitmap(500, 500);
+    Graphics* themeGraphics = Graphics::FromImage(backgroundBitmap);
+    themeGraphics->TranslateTransform(250, 250);
+    themeGraphics->RotateTransform(angle);
+    themeGraphics->ScaleTransform(2, 2);
+    themeGraphics->TranslateTransform(-250, -250);
+
+    // Create a solid brush in purple color
+    SolidBrush* themeBrush = new SolidBrush(Color::GhostWhite);
+
+    switch (theme)
+    {
+    case Theme::Purple:
+    {
+        themeBrush = new SolidBrush(Color::Purple);
+    }
+    break;
+    case Theme::Green:
+    {
+        themeBrush = new SolidBrush(Color::ForestGreen);
+    }
+    break;
+    case Theme::Orange:
+    {
+        themeBrush = new SolidBrush(Color::Orange);
+    }
+    break;
+    }
+    
+    // Get the color of the purple brush
+    Color themeColor;
+    themeBrush->GetColor(&themeColor);
+
+    // Calculate the darker color
+    int darkRed = max(themeColor.GetRed() - 100, 0);
+    int darkGreen = max(themeColor.GetGreen() - 100, 0);
+    int darkBlue = max(themeColor.GetBlue() - 100, 0);
+
+    // Create a solid brush in dark purple color
+    SolidBrush* darkPurpleBrush = new SolidBrush(Color(themeColor.GetAlpha(), darkRed, darkGreen, darkBlue));
+
+    themeGraphics->FillRectangle(darkPurpleBrush, Rect(0, 0, 500, 500));
+
+    // Define the radius of the balls
+    int radius = 10;
+
+    // Draw the balls at different positions
+    for (int i = 0; i < 500; i += 50) {
+        for (int j = 0; j < 500; j += 50) {
+            themeGraphics->FillEllipse(themeBrush, i, j, 2 * radius, 2 * radius);
+        }
+    }
+
+    BlurBitmap(backgroundBitmap);
+
+    delete themeGraphics;
 }
