@@ -7,6 +7,58 @@ void StylizedSubtitleWindow::Update()
     UpdateWindow(hwnd);
 }
 
+Bitmap* StylizedSubtitleWindow::LoadImageFromUrl(const char* url, int width, int height) {
+    CURL* curl;
+    CURLcode res;
+    std::vector<BYTE> imageData;
+
+    curl_global_init(CURL_GLOBAL_DEFAULT);
+    curl = curl_easy_init();
+
+    if (curl) {
+        curl_easy_setopt(curl, CURLOPT_URL, url);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallbackLoadImageFromUrl);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &imageData);
+        res = curl_easy_perform(curl);
+
+        if (res != CURLE_OK) {
+            fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+        }
+
+        curl_easy_cleanup(curl);
+    }
+
+    curl_global_cleanup();
+
+    // Create a GDI+ Image object from the downloaded data
+    IStream* pStream = NULL;
+    HGLOBAL hGlobal = GlobalAlloc(GMEM_MOVEABLE, imageData.size());
+    if (hGlobal) {
+        void* pBuf = GlobalLock(hGlobal);
+        if (pBuf) {
+            CopyMemory(pBuf, &imageData[0], imageData.size());
+            GlobalUnlock(hGlobal);
+            if (SUCCEEDED(CreateStreamOnHGlobal(hGlobal, TRUE, &pStream))) {
+                //Gdiplus::Image* image = Gdiplus::Image::FromStream(pStream);
+                Gdiplus::Bitmap* bitmap = ResizeBitmap(Gdiplus::Bitmap::FromStream(pStream), width, height);
+                pStream->Release();
+                return bitmap;
+            }
+        }
+        GlobalFree(hGlobal);
+    }
+
+    return NULL;
+}
+
+Bitmap* StylizedSubtitleWindow::ResizeBitmap(Bitmap* bmp, int newWidth, int newHeight)
+{
+    Bitmap* newBmp = new Bitmap(newWidth, newHeight, bmp->GetPixelFormat());
+    Graphics graphics(newBmp);
+    graphics.DrawImage(bmp, 0, 0, newWidth, newHeight);
+    return newBmp;
+}
+
 void StylizedSubtitleWindow::DrawSubtitleText(Graphics* graphics, std::wstring* displayText, PointF* point, Font* font, RectF* destRect)
 {
     if (backgroundBitmap == nullptr) {
@@ -17,10 +69,6 @@ void StylizedSubtitleWindow::DrawSubtitleText(Graphics* graphics, std::wstring* 
     StringFormat format;
     format.SetAlignment(StringAlignmentCenter);
     format.SetLineAlignment(StringAlignmentNear);
-
-    LinearGradientBrush textBrush(*destRect, textColorPrimary, textColorSecondary, LinearGradientModeHorizontal);
-
-    textBrush.SetGammaCorrection(TRUE);
 
     GraphicsPath path;
 
@@ -41,6 +89,8 @@ void StylizedSubtitleWindow::DrawSubtitleBackground(Graphics* graphics, RectF* d
         SubtitleWindow::DrawSubtitleBackground(graphics, destRect);
         return;
     }
+
+    //draws the same blurred image on top of another one with 50% opacity and rotates them in opposite directions based on "angle" which gets modified in Update().
 
     UINT ImageWidth = backgroundBitmap->GetWidth();
     UINT ImageHeight = backgroundBitmap->GetHeight();
@@ -166,9 +216,9 @@ void StylizedSubtitleWindow::SetTheme(Theme theme)
     themeBrush->GetColor(&themeColor);
 
     // Calculate the darker color
-    int darkRed = max(themeColor.GetRed() - 100, 0);
-    int darkGreen = max(themeColor.GetGreen() - 100, 0);
-    int darkBlue = max(themeColor.GetBlue() - 100, 0);
+    int darkRed = max(themeColor.GetRed() - 150, 0);
+    int darkGreen = max(themeColor.GetGreen() - 150, 0);
+    int darkBlue = max(themeColor.GetBlue() - 150, 0);
 
     // Create a solid brush in dark purple color
     SolidBrush* darkPurpleBrush = new SolidBrush(Color(themeColor.GetAlpha(), darkRed, darkGreen, darkBlue));

@@ -18,6 +18,9 @@
 #include "libs/json/json.hpp"
 using json = nlohmann::json;
 
+/**
+* @brief Write Callback used by libcurl to write the requested data into a variable.
+*/
 size_t SpotifyWriteCallback(char* contents, size_t size, size_t nmemb, void* userp);
 
 class Spotify
@@ -81,10 +84,23 @@ public:
     };
 private:
 
+    /**
+    * @brief takes in a lyrics string with json format and parses it into the LyricsData struct.
+    * @param readBuffer - string containing the json data.
+    * @return LyricsData
+    */
     LyricsData parseLyricsString(std::string readBuffer) {
         const char* jsonString = readBuffer.c_str();
+        json data;
 
-        json data = json::parse(readBuffer);
+        try {
+            data = json::parse(readBuffer);
+        }
+        catch (nlohmann::json::parse_error& e) {
+            data.clear();
+            return { SyncType::NONE, std::vector<LyricsTimeData>() };  // If a parse error is thrown, it's not a valid JSON string
+        }
+
 
         std::string startTimeMsString = data["lyrics"]["lines"][0]["startTimeMs"];
 
@@ -118,6 +134,12 @@ private:
 
 public:
 
+    /**
+    * @brief uses timestamp and lyrics data to get the closest upcoming lyric to the timestamp
+    * @param timestamp - the current timestamp, how far in milliseconds into the song to check.
+    * @param lyricsTimeData - a vector of time data containing timestamps and lyrics. 
+    * @return LyricsData
+    */
     static LyricData calculateNextLyric(unsigned long int timestamp, std::vector<LyricsTimeData> lyricsTimeData) {
         int vecSize = lyricsTimeData.size();
 
@@ -137,6 +159,12 @@ public:
         return { closestLyricsTimeData.elapsedTime - timestamp, closestLyricsTimeData.lineLyric, closestLyricsTimeData };
     }
 
+    /**
+    * @brief uses timestamp and lyrics data to get the closest lyric before the timestamp
+    * @param timestamp - the current timestamp, how far in milliseconds into the song to check.
+    * @param lyricsTimeData - a vector of time data containing timestamps and lyrics.
+    * @return LyricsData
+    */
     static LyricData calculateCurrentLyric(unsigned long int timestamp, std::vector<LyricsTimeData> lyricsTimeData) {
         int vecSize = lyricsTimeData.size();
 
@@ -156,23 +184,29 @@ public:
         return { closestLyricsTimeData.elapsedTime - timestamp, closestLyricsTimeData.lineLyric, closestLyricsTimeData };
     }
 
+    /**
+    * @brief retrieves and parses the lyrics based on the songs spotify id.
+    * @param id - the spotify id for the song. https://developer.spotify.com/documentation/web-api/concepts/spotify-uris-ids
+    * @return LyricsData
+    */
     LyricsData getLyrics(const char* id) {
         CURLcode ret;
         CURL* hnd;
         struct curl_slist* slist1;
         std::string readBufferWrite;
 
+        //curl HTTP header 
         slist1 = NULL;
         slist1 = curl_slist_append(slist1, "Accept: */*");
         slist1 = curl_slist_append(slist1, "Accept-Encoding: gzip, deflate");
         slist1 = curl_slist_append(slist1, "Connection: keep-alive");
-        slist1 = curl_slist_append(slist1, "Cookie: sp_dc=AQD6knh1dlSYR9FQqYRS8Y4WvKdVfCZpqJZt494pcxznS1GGuRFHqF9Lpmc0p8U02Tp44xrWcPm98gUuDe3Z-b4eLUnY8dCQ2L0UGRowgM2OGLx68NX-1E7TLrXw5oxEGsMCM-ULeJ9S_EP4LxGdFct5aXdW01I; sp_t=321ddf0ee6e6942fc2a04a79f085a2f5");
         slist1 = curl_slist_append(slist1, "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.41 Safari/537.36");
         slist1 = curl_slist_append(slist1, "app-platform: WebPlayer");
-        slist1 = curl_slist_append(slist1, authorizationString.c_str());
+        slist1 = curl_slist_append(slist1, authorizationString.c_str()); //access token
+        //curl HTTP header 
 
         std::string requestUrl = "https://spclient.wg.spotify.com/color-lyrics/v2/track/";
-        requestUrl += id;
+        requestUrl += id; // id of the song gets added to the url
         requestUrl += "\?format=json&market=from_token";
 
         hnd = curl_easy_init();
@@ -190,8 +224,8 @@ public:
 
         curl_easy_setopt(hnd, CURLOPT_VERBOSE, 1L);
 
-        curl_easy_setopt(hnd, CURLOPT_WRITEFUNCTION, SpotifyWriteCallback);
-        curl_easy_setopt(hnd, CURLOPT_WRITEDATA, &readBufferWrite);
+        curl_easy_setopt(hnd, CURLOPT_WRITEFUNCTION, SpotifyWriteCallback); //set write function
+        curl_easy_setopt(hnd, CURLOPT_WRITEDATA, &readBufferWrite); //variable that will retrieve the data using the write function
 
         ret = curl_easy_perform(hnd);
 
@@ -209,6 +243,10 @@ public:
         return parseLyricsString(readBufferWrite);
     }
 
+    /**
+    * @brief retrieves data for the currently playing spotify song.
+    * @return CurrentSongData
+    */
     CurrentSongData getCurrentlyPlaying() {
         CURLcode ret;
         CURL* hnd;
@@ -216,8 +254,10 @@ public:
 
         std::string readBuffer;
 
+        //curl HTTP header 
         slist1 = NULL;
-        slist1 = curl_slist_append(slist1, authorizationString.c_str());
+        slist1 = curl_slist_append(slist1, authorizationString.c_str()); //access token
+        //curl HTTP header 
 
         hnd = curl_easy_init();
         curl_easy_setopt(hnd, CURLOPT_BUFFERSIZE, 102400L);
@@ -244,11 +284,18 @@ public:
         if(readBuffer.length() == 0)
             return { NULL, NULL, NULL, NULL, false, ReturnCode::OK };
 
-        json data = json::parse(readBuffer);
+        json data;
+        try {
+            data = json::parse(readBuffer);
+        }
+        catch (nlohmann::json::parse_error& e) {
+            data.clear();
+            return { NULL, NULL, NULL, NULL,false, ReturnCode::SERVER_ERROR };  // If a parse error is thrown, it's not a valid JSON string
+        }
 
         unsigned long int progress_ms = data.value("progress_ms", 0);
 
-        if (data.contains("error")) {
+        if (data.contains("error") || data["item"].is_null()) {
             return { NULL, NULL, NULL, NULL,false, ReturnCode::SERVER_ERROR };
         }
 
@@ -258,11 +305,15 @@ public:
 
         std::string albumImageLink = data["item"]["album"]["images"][0].value("url", "");
 
-        CurrentSongData songData = { _strdup(name.c_str()), _strdup(id.c_str()), _strdup(albumImageLink.c_str()), progress_ms, true, ReturnCode::OK};
-
-        return songData;
+        //_strdup is used so the string doesn't go out of scope.
+        return { _strdup(name.c_str()), _strdup(id.c_str()), _strdup(albumImageLink.c_str()), progress_ms, true, ReturnCode::OK };
     }
 
+    /**
+    * @brief refreshes the access token. Needs to be done hourly because the generated tokens only last about an hour. 
+    * @param sp_dc - a secret token that can be accessed through the spotify web client. https://pkg.go.dev/github.com/mirrorfm/spotify-webplayer-token#section-readme
+    * @return LyricsData
+    */
     Result refreshAccessToken(const char* sp_dc) {
         CURLcode ret;
         CURL* hnd;
@@ -273,13 +324,15 @@ public:
         std::string sp_dc_string = "Cookie: sp_dc=";
         sp_dc_string += sp_dc;
 
+        //curl HTTP header 
         slist1 = NULL;
         slist1 = curl_slist_append(slist1, "Accept: */*");
         slist1 = curl_slist_append(slist1, "Accept-Encoding: gzip, deflate");
         slist1 = curl_slist_append(slist1, "Connection: keep-alive");
-        slist1 = curl_slist_append(slist1, sp_dc_string.c_str());
+        slist1 = curl_slist_append(slist1, sp_dc_string.c_str()); //SP_DC
         slist1 = curl_slist_append(slist1, "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.41 Safari/537.36");
         slist1 = curl_slist_append(slist1, "app-platform: WebPlayer");
+        //curl HTTP header 
 
         hnd = curl_easy_init();
         curl_easy_setopt(hnd, CURLOPT_BUFFERSIZE, 102400L);
@@ -319,7 +372,7 @@ public:
             return Result::FAIL;  // If a parse error is thrown, it's not a valid JSON string
         }
 
-        std::string accessTokenString = data["accessToken"];
+        std::string accessTokenString = data["accessToken"]; // extract the access token from the json response.
 
         accessToken = _strdup(accessTokenString.c_str());
 

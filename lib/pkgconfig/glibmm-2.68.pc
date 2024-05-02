@@ -1,0 +1,22 @@
+prefix=${pcfiledir}/../..
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+datarootdir=${prefix}/share
+datadir=${datarootdir}
+includedir=${prefix}/include
+
+gmmprocdir=${libdir}/glibmm-2.68/proc
+
+docdir=${datarootdir}/doc/glibmm-2.68
+doxytagfile=${docdir}/reference/glibmm-2.68.tag
+htmlrefdir=${docdir}/reference/html
+htmlrefpub=https://gnome.pages.gitlab.gnome.org/glibmm/
+
+Name: glibmm
+Description: C++ wrapper for GLib
+Version: 2.78.1
+URL: https://www.gtkmm.org/
+Requires: gobject-2.0 sigc++-3.0
+Libs: "-L${libdir}" -lglibmm-2.68
+Cflags: "-I${includedir}/glibmm-2.68" "-I${libdir}/glibmm-2.68/include"
+

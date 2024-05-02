@@ -5,10 +5,13 @@
 #pragma warning(disable:4996)
 #pragma comment(lib, "msimg32.lib")
 
-//AppCore.lib;Ultralight.lib;UltralightCore.lib;WebCore.lib;
-//a
+/*
+  Name:        Spotititle.cpp
+  Created:     ¯\_(ツ)_/¯
+  Author:      Martin Terner (https://github.com/oudend/spotititle)
+  Description: Uses non-public spotify api for parsing and displaying subtitles based on synced lyrics for currently playing song.
+*/
 
-//#include "SpotititleUI.h"
 
 #include <windows.h>
 
@@ -26,15 +29,10 @@
 #include <limits.h>
 #include <time.h>
 
-//#include <gtk-4.0\gtk\gtk.h>
-//#include <gtk\gtk.h>
-
 #include "libs/romaji/romaji.h"
 #include "resource1.h"
 #include "Spotify.h"
 
-
-//#include "SubtitleWindow.h";
 
 #include "StylizedSubtitleWindow.h";
 
@@ -46,9 +44,6 @@
 #define NK_GDI_IMPLEMENTATION
 #include "nuklear/nuklear.h"
 #include "nuklear/nuklear_gdi.h"
-
-//#include "SpotititleUI.h"
-//#include <AppCore/AppCore.h>
 
 #define NOT_LISTENING "not listening"
 #define NOT_SYNCED "lyrics not synced"
@@ -70,7 +65,7 @@ static int kanaToRomaji = 0;
 static int showLyrics = 1;
 int delayOffset = 0;
 
-int WINDOW_WIDTH = 300; //rename :(
+int WINDOW_WIDTH = 300;
 int WINDOW_HEIGHT = 800;
 
 char SP_DC[200];
@@ -226,7 +221,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     struct nk_context* ctx;
 
     RECT rect = { 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT };
-    DWORD style = WS_OVERLAPPED | WS_SYSMENU | WS_MINIMIZEBOX;
+    DWORD style = WS_OVERLAPPEDWINDOW | WS_VISIBLE;// (WS_OVERLAPPEDWINDOW | WS_POPUP | WS_SYSMENU) & ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU | WS_BORDER) | WS_VISIBLE;// (WS_OVERLAPPED) & ~WS_CAPTION & ~WS_SYSMENU;
     DWORD exstyle = WS_EX_APPWINDOW;
     HDC dc;
 
@@ -242,7 +237,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
     AdjustWindowRectEx(&rect, style, FALSE, exstyle);
     HWND GUIHwnd = CreateWindowExW(exstyle, GUIwc.lpszClassName, L"Spotititle",
-        style | WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT,
+        style, CW_USEDEFAULT, CW_USEDEFAULT,
         rect.right - rect.left, rect.bottom - rect.top,
         NULL, NULL, GUIwc.hInstance, NULL);
     dc = GetDC(GUIHwnd);
@@ -345,14 +340,26 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
             nk_checkbox_label(ctx, "convert kana to romaji", &kanaToRomaji);
 
-            //nk_checkbox_label(ctx, "use image background", &subtitleWindow.useImage);
-
             nk_layout_row_dynamic(ctx, 30, 2);
             int prev_theme = theme;
             theme = nk_combo(ctx, subtitleWindow.themes, sizeof(subtitleWindow.themes) / sizeof(subtitleWindow.themes[0]), theme, 25, nk_vec2(200, 200));
             if (theme != prev_theme) {
                 subtitleWindow.SetTheme(static_cast<StylizedSubtitleWindow::Theme>(theme));
                 //setTheme(&subtitleWindow, theme);
+            }
+
+
+            nk_layout_row_static(ctx, 30, WINDOW_WIDTH, 1);
+            nk_label(ctx, "fps", NK_TEXT_CENTERED);
+
+            nk_layout_row_static(ctx, 30, (WINDOW_WIDTH - 100) / 2, 2);
+            if (nk_slider_int(ctx, 1, &subtitleWindow.fps, 60, 1)) {
+                subtitleWindow.UpdateFPS();
+            }
+            int fpsTemp = subtitleWindow.fps;
+            subtitleWindow.fps = nk_propertyi(ctx, "fps:", 1, subtitleWindow.fps, 60, 1, 0.5f);
+            if (fpsTemp != subtitleWindow.fps) {
+                subtitleWindow.UpdateFPS();
             }
 
             nk_layout_row_static(ctx, 30, WINDOW_WIDTH, 1);
@@ -429,7 +436,6 @@ static LRESULT CALLBACK WindowProcGUI(HWND hwnd, UINT msg, WPARAM wparam, LPARAM
         return 0;
     case WM_SIZING:
     {
-        /* Size of the client / active area is extracted and stored */
         RECT rect;
         GetClientRect(hwnd, &rect);
         WINDOW_WIDTH = rect.right - rect.left;

@@ -1,0 +1,19 @@
+prefix=${pcfiledir}/../..
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+datarootdir=${prefix}
+datadir=${datarootdir}
+includedir=${prefix}/include
+
+docdir=${datarootdir}/doc/libsigc++-3.0
+doxytagfile=${docdir}/reference/libsigc++-3.0.tag
+htmlrefdir=${docdir}/reference/html
+htmlrefpub=https://libsigcplusplus.github.io/libsigcplusplus/reference/html/
+
+Name: libsigc++
+Description: Typesafe signal and callback system for C++
+Version: 3.4.0
+URL: https://libsigcplusplus.github.io/libsigcplusplus/
+Libs: "-L${libdir}" -lsigc-3.0
+Cflags: "-I${includedir}" 
+

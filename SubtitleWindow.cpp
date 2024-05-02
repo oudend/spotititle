@@ -2,8 +2,7 @@
 
 void SubtitleWindow::DrawSubtitleBackground(Graphics* graphics, RectF* destRect)
 {
-    LinearGradientBrush backgroundBrush(*destRect, backgroundColorPrimary, backgroundColorSecondary, LinearGradientModeHorizontal);
-    backgroundBrush.SetGammaCorrection(TRUE);
+    SolidBrush backgroundBrush(backgroundColor);
     graphics->FillRectangle(&backgroundBrush, *destRect);
 }
 
@@ -13,13 +12,9 @@ void SubtitleWindow::DrawSubtitleText(Graphics* graphics, std::wstring* displayT
     format.SetAlignment(StringAlignmentCenter);
     format.SetLineAlignment(StringAlignmentNear);
 
-    LinearGradientBrush textBrush(*destRect, textColorPrimary, textColorSecondary, LinearGradientModeHorizontal);
+    SolidBrush textBrush(textColor);
 
-    textBrush.SetGammaCorrection(TRUE);
-
-    GraphicsPath path;
-
-    //path.AddString();
+    GraphicsPath path; // GraphicsPath object for text outline.
 
     Point point2(point->X, point->Y);
 
@@ -42,6 +37,8 @@ void SubtitleWindow::SetDimensions(int width, int height)
 {
     this->width = width;
     this->height = height;
+
+    SetWindowPos(this->hwnd, 0, 0, 0, width, height, SWP_FRAMECHANGED | WS_VISIBLE);
 }
 
 void SubtitleWindow::SetText(const char* text)
@@ -59,16 +56,20 @@ void SubtitleWindow::Show()
     ShowWindow(hwnd, SW_SHOW);
 }
 
+void SubtitleWindow::UpdateFPS()
+{
+    SetTimer(hwnd, 1, (1000.0f / (float)fps), NULL); //starts a timer with the id "1" which updates at an interval based on the fps variable.
+}
+
 void SubtitleWindow::Update()
 {
-    backgroundGradientRotationMatrix->Rotate(2.0f); // 45 degree rotation
     RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE | RDW_ERASE);
     UpdateWindow(hwnd);
 }
 
 LRESULT SubtitleWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-    SubtitleWindow* subtitleWindow = (SubtitleWindow*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+    SubtitleWindow* subtitleWindow = (SubtitleWindow*)GetWindowLongPtr(hwnd, GWLP_USERDATA); //gets the object instance through a pointer stored in the window object, this is necessary to be able to access the classes variables and functions.
 
     switch (uMsg)
     {
@@ -114,19 +115,11 @@ LRESULT SubtitleWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM l
         HBITMAP hbmBuffer = CreateCompatibleBitmap(hdc, rect.right, rect.bottom);
         HBITMAP hbmOldBuffer = (HBITMAP)SelectObject(hdcBuffer, hbmBuffer);
 
-        //HBRUSH brush2 = CreateSolidBrush(RGB(0, 0, 0));
-
-        //FillRect(hdc, &ps.rcPaint, brush2);
-
         Graphics graphics(hdcBuffer);
 
         graphics.SetSmoothingMode(SmoothingModeAntiAlias);
 
-        //SolidBrush solidBrush(Color::Black);
-
-        //graphics.FillRectangle(&solidBrush, RectF(ps.rcPaint.left, ps.rcPaint.top, (ps.rcPaint.right - ps.rcPaint.left), (ps.rcPaint.bottom - ps.rcPaint.top)));
-
-        FontFamily fontFamily(L"Consolas");
+        FontFamily fontFamily(subtitleWindow->fontName);
 
         Font font(&fontFamily, subtitleWindow->fontSize, FontStyleRegular, UnitPixel);
 
@@ -163,7 +156,7 @@ LRESULT SubtitleWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM l
     break;
     case WM_TIMER:
     {
-        subtitleWindow->Update();
+        subtitleWindow->Update(); //calls the update function based on the fps of the SubtitleWindow at an even interval. 
         return 0;
     }
     break;

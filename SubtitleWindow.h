@@ -6,7 +6,6 @@
 
 #include <iostream>
 #include <algorithm>
-
 #include <sstream>
 #include <string>
 #include <stdio.h>
@@ -37,13 +36,8 @@ protected:
 public:
     const char* displayText;
 
-    Color textColorPrimary;
-    Color textColorSecondary;
-
-    Color backgroundColorPrimary;
-    Color backgroundColorSecondary;
-
-    Matrix* backgroundGradientRotationMatrix;
+    Color textColor;
+    Color backgroundColor;
 
     WNDCLASS subtitleWc;
     HWND hwnd;
@@ -53,19 +47,44 @@ public:
 
     int fontSize = 30;
 
-    const char* fontName = "Consolas";
+    int fps = 5;
+
+    const WCHAR* fontName = L"Consolas";
 
     static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
+    /**
+    * @brief sets the width and height of the window.
+    * @param width - the width of the window.
+    * @param height - the height of the window.
+    */
     void SetDimensions(int width, int height);
 
+    /**
+    * @brief sets the subtitle text to display for the window.
+    * @param text - text to display
+    */
     void SetText(const char* text);
 
+    /**
+    * @brief updates the window and its visual effects. 
+    */
     void virtual Update();
 
+    /**
+    * @brief hides the window.
+    */
     void Hide();
 
+    /**
+    * @brief shows the window.
+    */
     void Show();
+
+    /**
+    * @brief applies fps changes.
+    */
+    void UpdateFPS();
 
     SubtitleWindow(const char* displayText, HINSTANCE hInstance, int nCmdShow, int width, int height, int x, int y) : displayText(displayText), width(width), height(height) {
         const wchar_t CLASS_NAME[] = L"Subtitle Window Class";
@@ -92,36 +111,16 @@ public:
 
         SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)this); // store the class context in the window to be used by WindowProc
 
-        //long Style = (WS_CAPTION | WS_SYSMENU);
-        //long a = SetWindowLongA(hwnd, GWL_STYLE, Style & ~WS_BORDER);
-
-        //SetWindowLong(hwnd, GWL_EXSTYLE, GetWindowLong(hwnd, GWL_EXSTYLE) | WS_EX_LAYERED);
-
-       /* LONG lStyle = GetWindowLong(hwnd, GWL_STYLE);
-        lStyle &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU);
-        SetWindowLong(hwnd, GWL_STYLE, lStyle);*/
-
-
-        //HRGN GGG = CreateRectRgn(0, 0, 1920, 1200); // Create a region (adjust dimensions as needed)
-        //InvertRgn(GetDC(hwnd), GGG); // Invert the region (makes the window transparent)
-        //SetWindowRgn(hwnd, GGG, false);
-
         SetLayeredWindowAttributes(hwnd, RGB(0,0,0), 0, LWA_COLORKEY);
-
-        //SetLayeredWindowAttributes(hwnd, RGB(0, 25, 0), 255, LWA_COLORKEY);
 
         GdiplusStartupInput gdiplusStartupInput;
         ULONG_PTR           gdiplusToken;
         Status st = GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
 
-        textColorPrimary = Color(255, 255, 255);
-        textColorSecondary = Color(255, 255, 255);
-        backgroundColorPrimary = Color(0, 0, 0);
-        backgroundColorSecondary = Color(0, 0, 0);
+        textColor = Color(255, 255, 255);
+        backgroundColor = Color(0, 0, 0);
 
-        backgroundGradientRotationMatrix = new Matrix();
-
-        SetTimer(hwnd, 66, 66, NULL);
+        SetTimer(hwnd, 1, (1000.0f / (float)fps), NULL);
 
         Show();
     }

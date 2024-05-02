@@ -1,0 +1,20 @@
+prefix=${pcfiledir}/../..
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+datarootdir=${prefix}/share
+datadir=${datarootdir}
+includedir=${prefix}/include
+
+docdir=${datarootdir}/doc/glibmm-2.68
+doxytagfile=${docdir}/reference/glibmm-2.68.tag
+htmlrefdir=${docdir}/reference/html
+htmlrefpub=https://gnome.pages.gitlab.gnome.org/glibmm/
+
+Name: giomm
+Description: C++ binding for gio
+Version: 2.78.1
+URL: https://www.gtkmm.org/
+Requires: gio-2.0 glibmm-2.68
+Libs: "-L${libdir}" -lgiomm-2.68
+Cflags: "-I${includedir}/giomm-2.68" "-I${libdir}/giomm-2.68/include"
+

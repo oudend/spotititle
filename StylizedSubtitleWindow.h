@@ -47,57 +47,23 @@ private:
         return newLength;
     }
 
-    Bitmap* ResizeBitmap(Bitmap* bmp, int newWidth, int newHeight)
-    {
-        Bitmap* newBmp = new Bitmap(newWidth, newHeight, bmp->GetPixelFormat());
-        Graphics graphics(newBmp);
-        graphics.DrawImage(bmp, 0, 0, newWidth, newHeight);
-        return newBmp;
-    }
+    /**
+    * @brief resizes bitmap to specified width and height.
+    * @param bmp - a pointer to the bitmap which will be resized.
+    * @param newWidth - the new width of the bitmap.
+    * @param newHeight - the new height of the bitmap.
+    * @return Bitmap*
+    */
+    Bitmap* ResizeBitmap(Bitmap* bmp, int newWidth, int newHeight);
 
-    Bitmap* LoadImageFromUrl(const char* url, int width = 400, int height = 400) {
-        CURL* curl;
-        CURLcode res;
-        std::vector<BYTE> imageData;
-
-        curl_global_init(CURL_GLOBAL_DEFAULT);
-        curl = curl_easy_init();
-
-        if (curl) {
-            curl_easy_setopt(curl, CURLOPT_URL, url);
-            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallbackLoadImageFromUrl);
-            curl_easy_setopt(curl, CURLOPT_WRITEDATA, &imageData);
-            res = curl_easy_perform(curl);
-
-            if (res != CURLE_OK) {
-                fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
-            }
-
-            curl_easy_cleanup(curl);
-        }
-
-        curl_global_cleanup();
-
-        // Create a GDI+ Image object from the downloaded data
-        IStream* pStream = NULL;
-        HGLOBAL hGlobal = GlobalAlloc(GMEM_MOVEABLE, imageData.size());
-        if (hGlobal) {
-            void* pBuf = GlobalLock(hGlobal);
-            if (pBuf) {
-                CopyMemory(pBuf, &imageData[0], imageData.size());
-                GlobalUnlock(hGlobal);
-                if (SUCCEEDED(CreateStreamOnHGlobal(hGlobal, TRUE, &pStream))) {
-                    //Gdiplus::Image* image = Gdiplus::Image::FromStream(pStream);
-                    Gdiplus::Bitmap* bitmap = ResizeBitmap(Gdiplus::Bitmap::FromStream(pStream), width, height);
-                    pStream->Release();
-                    return bitmap;
-                }
-            }
-            GlobalFree(hGlobal);
-        }
-
-        return NULL;
-    }
+    /**
+    * @brief downloads image as bitmap based on url and resizes bitmap to specified width and height.
+    * @param url - string containing the url for the image to load.
+    * @param width - the new width of the image.
+    * @param height - the new height of the image.
+    * @return Bitmap*
+    */
+    Bitmap* LoadImageFromUrl(const char* url, int width = 400, int height = 400);
 
 public:
     enum Theme
@@ -107,10 +73,11 @@ public:
         Orange = 2,
         Blue = 3,
         Red = 4,
-        Image = 5
+        Pink = 5,
+        Image = 6
     };
-    const int themeColors[6] = {Color::Purple, Color::ForestGreen, Color::Orange, Color::CornflowerBlue, Color::MediumVioletRed,Color::GhostWhite};
-    const char* themes[6] = {"Purple", "Green", "Orange", "Blue", "Red", "Image"};
+    const int themeColors[7] = {Color::Purple, Color::ForestGreen, Color::Orange, Color::CornflowerBlue, Color::MediumVioletRed, Color::HotPink, Color::GhostWhite};
+    const char* themes[7] = {"Purple", "Green", "Orange", "Blue", "Red", "Pink", "Image"};
 
 private:
     Theme currentTheme;
@@ -119,11 +86,24 @@ public:
     Bitmap* loadedImage = nullptr;
     Bitmap* backgroundBitmap = nullptr;
 
-
+    /**
+    * @brief blurs Bitmap using gdip+ based on radius. 
+    * @param bitmap - bitmap to blur.
+    * @param radius - blur radius.
+    * @return Bitmap*
+    */
     Bitmap* BlurBitmap(Bitmap* bitmap, int radius = 40);
 
+    /**
+    * @brief sets the image the subtitle window will use as background based on url.
+    * @param url - url to the image.
+    */
     void SetImage(const char* url);
 
+    /**
+    * @brief sets the theme of the subtitle window which determines its background colors.
+    * @param theme - the theme to use.
+    */
     void SetTheme(Theme theme);
 
     void Update();

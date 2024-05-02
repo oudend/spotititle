@@ -1,0 +1,12 @@
+prefix=${pcfiledir}/../..
+exec_prefix=${prefix}
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+Name: libsass
+URL: https://github.com/sass/libsass
+Description: A C implementation of a Sass compiler
+Version: na
+Libs: "-L${libdir}" -lsass
+Cflags: "-I${includedir}"
+
