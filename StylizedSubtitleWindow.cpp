@@ -207,11 +207,11 @@ void StylizedSubtitleWindow::SetTheme(Theme theme)
     themeGraphics->ScaleTransform(2, 2);
     themeGraphics->TranslateTransform(-250, -250);
 
-    // Create a solid brush in purple color
+    // Create a solid brush with theme color
 
     SolidBrush* themeBrush = new SolidBrush(themeColors[theme]);
     
-    // Get the color of the purple brush
+    // Get the color of the theme colored brush
     Color themeColor;
     themeBrush->GetColor(&themeColor);
 
@@ -220,10 +220,11 @@ void StylizedSubtitleWindow::SetTheme(Theme theme)
     int darkGreen = max(themeColor.GetGreen() - 150, 0);
     int darkBlue = max(themeColor.GetBlue() - 150, 0);
 
-    // Create a solid brush in dark purple color
-    SolidBrush* darkPurpleBrush = new SolidBrush(Color(themeColor.GetAlpha(), darkRed, darkGreen, darkBlue));
+    // Create a solid brush in dark theme color
+    SolidBrush* darkThemerush = new SolidBrush(Color(themeColor.GetAlpha(), darkRed, darkGreen, darkBlue));
 
-    themeGraphics->FillRectangle(darkPurpleBrush, Rect(0, 0, 500, 500));
+    //fill background color
+    themeGraphics->FillRectangle(darkThemerush, Rect(0, 0, 500, 500));
 
     // Define the radius of the balls
     int radius = 10;

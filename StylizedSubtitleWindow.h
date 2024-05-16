@@ -32,7 +32,7 @@ using namespace Gdiplus;
 
 class StylizedSubtitleWindow : public SubtitleWindow
 {
-protected:
+protected: //necessary to define here so that I can use the original ones defined in SubtitleWindow.h as well.
     void virtual DrawSubtitleBackground(Graphics* graphics, RectF* destRect);
     void virtual DrawSubtitleText(Graphics* graphics, std::wstring* displayText, PointF* point, Font* font, RectF* destRect);
 private:

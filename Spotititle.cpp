@@ -49,13 +49,13 @@
 #define NOT_SYNCED "lyrics not synced"
 #define NOT_CONNECTED "not connected(sp_dc needed)"
 
-#define MAX_ERROR_COUNT 10
+#define MAX_ERROR_COUNT 10 //maximum consecutive errors to tolerate before the subtitle reverts to NOT_LISTENING state.
 
 
 const char* nextDisplayText = "not listening";
 const char* currentSong = "";
 
-int idleUpdateDelay = 2000;
+int idleUpdateDelay = 2000; //how often to update the display text in milliseconds.
 
 unsigned long int nextDisplayTextDelay = idleUpdateDelay;
 unsigned long int nextDisplayTextProgress = 0;
@@ -68,7 +68,7 @@ int delayOffset = 0;
 int WINDOW_WIDTH = 300;
 int WINDOW_HEIGHT = 800;
 
-char SP_DC[200];
+char SP_DC[200]; //variable storing SP_DC string
 
 Spotify spotify;
 
@@ -88,6 +88,10 @@ bool SP_DC_VALID = false;
 
 int fontSize = 30;
 
+/**
+* @brief calculates subtitle timings and sets the subtitles using global variables.
+* @param *subtitleWindow pointer to the subtitleWindow object.
+*/
 void calculateSubtitles(StylizedSubtitleWindow *subtitleWindow) {
     songData = spotify.getCurrentlyPlaying();
 
@@ -110,17 +114,17 @@ void calculateSubtitles(StylizedSubtitleWindow *subtitleWindow) {
 
     if (songData.code == Spotify::ReturnCode::SERVER_ERROR) {
         name = currentSong;
-        progress += nextDisplayTextDelay;
+        progress += nextDisplayTextDelay; //if SERVER_ERROR we don't get the current accurate progress from spotify but we can guess because we know roughly how much time should have passed since the function was last called.
     } else {
         progress = songData.progress;
     }
 
 
     if (progress >= nextDisplayTextProgress) {
-        subtitleWindow->SetText(_strdup(nextDisplayText));
+        subtitleWindow->SetText(_strdup(nextDisplayText)); //update display text for subtitle window to new text.
     }
 
-    if (strcmp(name, currentSong) != 0) {
+    if (strcmp(name, currentSong) != 0) { //if the song name is different than before then that must mean that the song has been switched.
         lyricsData = spotify.getLyrics(songData.id);
         currentSong = name;
 
@@ -129,19 +133,19 @@ void calculateSubtitles(StylizedSubtitleWindow *subtitleWindow) {
 
             if (progress - currentLyricData.closestLyricsTimeData.elapsedTime > 0) //we have not reached the first line lyric yet
             {
-                subtitleWindow->SetText(currentSong);
+                subtitleWindow->SetText(currentSong); //set the subtitle text to the currently playing song's name
             }
             else {
                 subtitleWindow->SetText(currentLyricData.lineLyric);
             }
         }
         else {
-            subtitleWindow->SetText(currentSong);
+            subtitleWindow->SetText(currentSong); //set the subtitle text to the currently playing song's name
             nextDisplayText = currentSong;
             return;
         }
 
-        subtitleWindow->SetImage(songData.albumImageLink);
+        subtitleWindow->SetImage(songData.albumImageLink); //load the thumbnail of the song using the albumImageLink.
 
     }
 
@@ -153,14 +157,14 @@ void calculateSubtitles(StylizedSubtitleWindow *subtitleWindow) {
     else
     {
         Spotify::LyricData currentLyricData = Spotify::calculateNextLyric(progress, lyricsData.lyricsTimeData);
-        nextDisplayTextDelay = std::min<unsigned long int>(currentLyricData.timeLeft + delayOffset, idleUpdateDelay);
-        nextDisplayTextProgress = currentLyricData.closestLyricsTimeData.elapsedTime + delayOffset;
+        nextDisplayTextDelay = std::min<unsigned long int>(currentLyricData.timeLeft + delayOffset, idleUpdateDelay); //wait less only if the time left until the next lyric is less than the current idleUpdateDelay.
+        nextDisplayTextProgress = currentLyricData.closestLyricsTimeData.elapsedTime + delayOffset; //sets the progress required to display the next lyric.
         nextDisplayText = currentLyricData.lineLyric;
 
         if (kanaToRomaji == 1) {
             romaji = "";
             try {
-                japanese::utf8_kana_to_romaji(currentLyricData.lineLyric, romaji);
+                japanese::utf8_kana_to_romaji(currentLyricData.lineLyric, romaji); //uses library to (hopefully without isssues) convert kana too romanji. (I've slightly edited the library so if a character is normal ascii it should just pass it through, this means that things like kpop work because it can allow for english words and kana being in the same sentence. 
                 nextDisplayText = romaji.c_str();
             }
             catch (const std::exception& e) {
@@ -170,6 +174,10 @@ void calculateSubtitles(StylizedSubtitleWindow *subtitleWindow) {
     }
 }
 
+/**
+* @brief TimerRoutine which calculates the subtitles and then updates its interval according to the updated nextDisplayTextDelay value.
+* @param lpParam pointer which contains the StylizedSubtitleWindow in this case.
+*/
 VOID CALLBACK TimerRoutine(PVOID lpParam, BOOLEAN TimerOrWaitFired)
 {
     calculateSubtitles((StylizedSubtitleWindow*)lpParam);
@@ -178,7 +186,10 @@ VOID CALLBACK TimerRoutine(PVOID lpParam, BOOLEAN TimerOrWaitFired)
         OutputDebugStringW(L"ChangeTimerQueueTimer failed\n");
 }
 
-
+/**
+* @brief initializes the TimerRoutine 
+* @param *subtitleWindow pointer to a StylizedSubtitleWindow instance.
+*/
 int initializeTimer(StylizedSubtitleWindow *subtitleWindow) {
     hTimerQueue = CreateTimerQueue();
     if (NULL == hTimerQueue)
@@ -208,14 +219,15 @@ static int theme = StylizedSubtitleWindow::Theme::Purple;
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
 {
-    const int screenWidth = GetSystemMetrics(SM_CXSCREEN);
-    const int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+    const int screenWidth = GetSystemMetrics(SM_CXSCREEN); // screen width
+    const int screenHeight = GetSystemMetrics(SM_CYSCREEN); // screen height
 
+    //initialize subtitle window.
     StylizedSubtitleWindow subtitleWindow = StylizedSubtitleWindow(NOT_CONNECTED, hInstance, nCmdShow, screenWidth, screenHeight, 200, 300);
 
     subtitleWindow.SetTheme(static_cast<StylizedSubtitleWindow::Theme>(theme));
 
-    setFontSize(&subtitleWindow, fontSize);
+    subtitleWindow.fontSize = fontSize;
 
     GdiFont* font;
     struct nk_context* ctx;
@@ -225,7 +237,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     DWORD exstyle = WS_EX_APPWINDOW;
     HDC dc;
 
-    /* Win32 */
+    /* Win32 window options and mandatory stuff for the nuklear window */
     WNDCLASSW GUIwc;
     memset(&GUIwc, 0, sizeof(GUIwc));
     GUIwc.style = CS_DBLCLKS;
@@ -243,7 +255,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     dc = GetDC(GUIHwnd);
 
     /* GUI */
-    font = nk_gdifont_create("Consolas", 14);
+    font = nk_gdifont_create("Consolas", 14); // The font of the nuklear gui
     ctx = nk_gdi_init(font, dc, WINDOW_WIDTH, WINDOW_HEIGHT);
 
     MSG msg = { };
@@ -251,7 +263,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     SetTimer(GUIHwnd, 1, 20, NULL);
 
     int running = 1;
-    int needs_refresh = 1;
+    int needs_refresh = 1; //whether or not the nuklear window needs refresh.
 
 
     while (running) {
@@ -280,13 +292,9 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
         if (nk_begin(ctx, "Settings", nk_rect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT), NK_WINDOW_NO_SCROLLBAR))
         {
-            static struct nk_colorf currentTextColor = { 0.058f, 0.058f, 0.058f };
-            static struct nk_colorf currentBackgroundColor = { 0.509f, 0.705f, 1.0f };
-
-            static struct nk_colorf tempTextColor = { 0.509f, 0.705f, 0.2f };
-            static struct nk_colorf tempBackgroundColor = { 0.78f, 0.78f, 0.2f };
-
             static int text_len;
+
+            // SP_DC input
 
             nk_layout_row_static(ctx, 30, WINDOW_WIDTH, 1);
             if (nk_widget_is_hovered(ctx))
@@ -301,6 +309,10 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
             if (nk_widget_is_hovered(ctx))
                 nk_tooltip(ctx, "refreshes the access token, can fix lyrics problems.");
+
+            // SP_DC input
+
+            // SP_DC button input
 
             if (nk_button_label(ctx, "update SP_DC")) {
                 Spotify::Result result = spotify.refreshAccessToken(SP_DC);
@@ -318,15 +330,16 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
                 }
             }
 
+            // SP_DC button input
+
             if (!SP_DC_VALID) {
                 nk_layout_row_static(ctx, 30, WINDOW_WIDTH, 1);
                 nk_label_colored(ctx, "invalid SP_DC", NK_TEXT_LEFT, nk_rgb(255, 0, 0));
             }
 
-            nk_layout_row_static(ctx, 30, WINDOW_WIDTH, 1);
-            nk_label(ctx, "toggle", NK_TEXT_CENTERED);
-            nk_layout_row_static(ctx, 30, WINDOW_WIDTH - 100, 1);
+            // lyrics visibility toggle
 
+            nk_layout_row_static(ctx, 30, WINDOW_WIDTH - 100, 1);
             if (nk_checkbox_label(ctx, "lyrics visible", &showLyrics)) {
                 if (!showLyrics) {
                     subtitleWindow.Hide();
@@ -336,18 +349,28 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
                 }
             }
 
-            nk_layout_row_static(ctx, 30, WINDOW_WIDTH - 100, 1);
+            // lyrics visibility toggle
 
+            //  kana to romaji input
+
+            nk_layout_row_static(ctx, 30, WINDOW_WIDTH - 100, 1);
             nk_checkbox_label(ctx, "convert kana to romaji", &kanaToRomaji);
+
+            //  kana to romaji input
+
+            // theme input
 
             nk_layout_row_dynamic(ctx, 30, 2);
             int prev_theme = theme;
             theme = nk_combo(ctx, subtitleWindow.themes, sizeof(subtitleWindow.themes) / sizeof(subtitleWindow.themes[0]), theme, 25, nk_vec2(200, 200));
             if (theme != prev_theme) {
                 subtitleWindow.SetTheme(static_cast<StylizedSubtitleWindow::Theme>(theme));
-                //setTheme(&subtitleWindow, theme);
             }
 
+            // theme input
+
+
+            // fps input
 
             nk_layout_row_static(ctx, 30, WINDOW_WIDTH, 1);
             nk_label(ctx, "fps", NK_TEXT_CENTERED);
@@ -362,37 +385,42 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
                 subtitleWindow.UpdateFPS();
             }
 
+            // fps input
+
+            // font size
+
             nk_layout_row_static(ctx, 30, WINDOW_WIDTH, 1);
             nk_label(ctx, "font size", NK_TEXT_CENTERED);
-
             nk_layout_row_static(ctx, 30, (WINDOW_WIDTH - 100) / 2, 2);
-            if (nk_slider_int(ctx, 6, &fontSize, 50, 1)) {
-                setFontSize(&subtitleWindow, fontSize);
+            if (nk_slider_int(ctx, 6, &fontSize, 100, 1)) {
+                subtitleWindow.fontSize = fontSize;
             }
             int fontSizeTemp = fontSize;
-            fontSize = nk_propertyi(ctx, "size:", 6, fontSize, 50, 1, 0.5f);
+            fontSize = nk_propertyi(ctx, "size:", 6, fontSize, 100, 1, 0.5f);
             if (fontSizeTemp != fontSize) {
-                setFontSize(&subtitleWindow, fontSize);
+                subtitleWindow.fontSize = fontSize;
             }
+
+            // font size
             
 
             nk_layout_row_static(ctx, 30, WINDOW_WIDTH, 1);
             nk_label(ctx, "idleUpdateDelay", NK_TEXT_CENTERED);
-
             nk_layout_row_static(ctx, 30, (WINDOW_WIDTH - 100) / 2, 2);
             nk_slider_int(ctx, 1000, &idleUpdateDelay, 4000, 1);
             idleUpdateDelay = nk_propertyi(ctx, "delay:", 1000, idleUpdateDelay, 4000, 1, 0.5f);
 
             nk_layout_row_static(ctx, 30, WINDOW_WIDTH, 1);
             nk_label(ctx, "delayOffset", NK_TEXT_CENTERED);
-
             nk_layout_row_static(ctx, 30, (WINDOW_WIDTH - 100) / 2, 2);
             nk_slider_int(ctx, -2000, &delayOffset, 2000, 1);
             delayOffset = nk_propertyi(ctx, "offset:", -2000, delayOffset, 2000, 1, 0.5f);
 
+
+            // debug info
+
             nk_layout_row_static(ctx, 30, WINDOW_WIDTH - 100, 1);
             nk_label(ctx, currentSong, NK_TEXT_CENTERED);
-
             nk_layout_row_static(ctx, 30, WINDOW_WIDTH - 100, 1);
             nk_label(ctx, "progress", NK_TEXT_CENTERED);
 
@@ -401,15 +429,15 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
             nk_layout_row_static(ctx, 30, WINDOW_WIDTH - 100, 1);
             nk_label(ctx, "target progress", NK_TEXT_CENTERED);
-
             nk_layout_row_static(ctx, 30, WINDOW_WIDTH - 100, 1);
             nk_label(ctx, std::to_string(nextDisplayTextProgress).c_str(), NK_TEXT_CENTERED);
 
             nk_layout_row_static(ctx, 30, WINDOW_WIDTH - 100, 1);
             nk_label(ctx, "next text", NK_TEXT_CENTERED);
-
             nk_layout_row_static(ctx, 30, WINDOW_WIDTH - 100, 1);
             nk_label(ctx, nextDisplayText, NK_TEXT_CENTERED);
+
+            // debug info
         }
         nk_end(ctx);
 

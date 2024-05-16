@@ -93,23 +93,21 @@ LRESULT SubtitleWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM l
     break;
     case WM_NCHITTEST:
     {
-        // Make the entire window draggable
+        //make the entire window draggable
         return HTCAPTION;
     }
     break;
     case WM_PAINT:
     {
         std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-        std::wstring wcDisplayText = converter.from_bytes(subtitleWindow->displayText);
+        std::wstring wcDisplayText = converter.from_bytes(subtitleWindow->displayText); //converts the displayText string to the wstring format which is necessary for gdi.
 
         PAINTSTRUCT ps;
 
         HDC hdc = BeginPaint(hwnd, &ps);
 
         RECT rect;
-        GetClientRect(hwnd, &rect);
-
-        RectF clientRect(rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top);
+        GetClientRect(hwnd, &rect); //get the screen size.
 
         HDC hdcBuffer = CreateCompatibleDC(hdc);
         HBITMAP hbmBuffer = CreateCompatibleBitmap(hdc, rect.right, rect.bottom);
@@ -132,13 +130,13 @@ LRESULT SubtitleWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM l
         PointF point((ps.rcPaint.right - ps.rcPaint.left) * 0.5, 0);
         
         graphics.MeasureString(wcDisplayText.c_str(), -1,
-            &font, point, &format, &boundRect);
+            &font, point, &format, &boundRect); //saves the dimensions of the displayText if it were drawn based on input variables into the boundRect variable.
 
-        subtitleWindow->DrawSubtitleBackground(&graphics, &boundRect);
+        subtitleWindow->DrawSubtitleBackground(&graphics, &boundRect); //draws the background for the displayText using the boundRect variable
 
-        subtitleWindow->DrawSubtitleText(&graphics, &wcDisplayText, &point, &font, &boundRect);
+        subtitleWindow->DrawSubtitleText(&graphics, &wcDisplayText, &point, &font, &boundRect); //draws the displayText
 
-        BitBlt(hdc, 0, 0, rect.right, rect.bottom, hdcBuffer, 0, 0, SRCCOPY);
+        BitBlt(hdc, 0, 0, rect.right, rect.bottom, hdcBuffer, 0, 0, SRCCOPY); //copy over the drawn subtitle into the window, by not working directly on the window buffer we also prevent visible artifacts while the output is being drawn.
 
         RectF windowRect(ps.rcPaint.left, ps.rcPaint.top, (ps.rcPaint.right - ps.rcPaint.left), (ps.rcPaint.bottom - ps.rcPaint.top));
 
